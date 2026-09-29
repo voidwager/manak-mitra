@@ -14,6 +14,7 @@ watching cannot be ground down at leisure.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
 from app.core.security import (
+    AccessLevel,
     LOCKOUT_DURATION,
     _as_utc,
     MAX_FAILED_LOGINS,
@@ -173,6 +175,58 @@ def authenticate(
     db.commit()
     db.refresh(user)
 
+    return SignedIn(user=user, token=token, session=session)
+
+
+def start_guest_session(db: Session, user_agent: str = "") -> SignedIn:
+    """Open a session for an anonymous helpdesk visitor.
+
+    Each visitor gets their own row rather than sharing one "guest" account.
+    Conversations, uploads and settings are all keyed by user, so a shared
+    account would show every visitor everybody else's chats.
+
+    The row has no password hash, so it can never be signed into by
+    password - `verify_password` fails closed on a missing hash. The session
+    token is the only credential, and when it expires the visitor is gone.
+    """
+    suffix = uuid.uuid4().hex[:12]
+    user = User(
+        id=f"guest-{suffix}",
+        name="Visitor",
+        email=f"visitor-{suffix}@guest.invalid",
+        role="Public visitor",
+        initials="V",
+        access_level=AccessLevel.PUBLIC,
+        scope_label="Public BIS information",
+        # Informational only: a visitor's grant is read from
+        # access.PUBLIC_FOLDERS at request time, never from this column.
+        assigned_folders=[],
+        avatar_gradient="linear-gradient(135deg, #1E3A8A, #F59E0B)",
+        password_hash=None,
+    )
+    db.add(user)
+    db.flush()
+
+    token = new_session_token()
+    now = utcnow()
+    session = UserSession(
+        id=hash_token(token),
+        user_id=user.id,
+        last_seen_at=now,
+        expires_at=session_expiry(now),
+        user_agent=(user_agent or "")[:255],
+    )
+    db.add(session)
+    audit.record(
+        db,
+        user_id=user.id,
+        action="auth.guest",
+        resource_type="user",
+        resource_id=user.id,
+        detail={"user_agent": session.user_agent},
+    )
+    db.commit()
+    db.refresh(user)
     return SignedIn(user=user, token=token, session=session)
 
 

@@ -138,6 +138,13 @@ def auth_headers(client, user_id: str, email: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+#: The seeded staff accounts (see app/database/seed.py). One place, so a
+#: change to the seed is one edit here rather than a hunt through the suite.
+OWNER_EMAIL = "admin@bis-helpdesk.example"
+ENGINEER_EMAIL = "certification@bis-helpdesk.example"
+SAFETY_EMAIL = "hallmarking@bis-helpdesk.example"
+
+
 @pytest.fixture
 def owner_headers(client):
     """Sanyam Jain - owner clearance.
@@ -147,19 +154,19 @@ def owner_headers(client):
     access model was already being enforced server-side rather than relying
     on the client's claim.
     """
-    return auth_headers(client, "user-sanyam", "testowner@refinery.example")
+    return auth_headers(client, "user-sanyam", OWNER_EMAIL)
 
 
 @pytest.fixture
 def engineer_headers(client):
-    """Ananya Roy - scoped to CDU-II and her own uploads."""
-    return auth_headers(client, "user-ananya", "testemployee@refinery.example")
+    """Ananya Roy - Certification Officer: public sources + Certification Desk."""
+    return auth_headers(client, "user-ananya", ENGINEER_EMAIL)
 
 
 @pytest.fixture
 def safety_headers(client):
-    """Dev Patel - scoped to Safety only."""
-    return auth_headers(client, "user-dev", "testemployee2@refinery.example")
+    """Dev Patel - Hallmarking Officer: public sources + Hallmarking Desk."""
+    return auth_headers(client, "user-dev", SAFETY_EMAIL)
 
 
 @pytest.fixture
@@ -234,6 +241,8 @@ def stub_gateway(monkeypatch):
         )
         for module in (
             "app.services.chat_service",
+            # Rewrites non-English questions for search before retrieval.
+            "app.services.language",
             # Derives agent status and capabilities from the live gateway,
             # so it needs the stub too or every agent reports Unavailable.
             "app.services.agents",

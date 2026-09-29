@@ -217,6 +217,14 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 16
     embedding_timeout_seconds: float = 120.0
 
+    # --- Public helpdesk ------------------------------------------------
+    # BIS answers the public, so by default anyone may open the assistant
+    # without an account: POST /auth/guest mints a throwaway visitor with
+    # read access to the public folders and nothing else. Staff still sign in
+    # with a password to manage documents, agents and the audit trail.
+    # Switch off for a staff-only deployment.
+    public_mode: bool = True
+
     #: Built frontend, relative to the repo root unless absolute. Set by the
     #: container image; unset and non-existent in development.
     frontend_dist: str = "frontend/dist"

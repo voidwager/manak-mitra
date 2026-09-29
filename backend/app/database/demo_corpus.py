@@ -1,8 +1,15 @@
-"""Build the synthetic demo corpus as real files on disk.
+"""Build the seed corpus as real files on disk.
 
-Everything produced here is **fictional**. There is no SYNQ data in this
-project; the refinery, its units, equipment tags, personnel and procedures
-are invented for development and demonstration.
+Two kinds of source live under `data/`:
+
+  data/bis/source/    public BIS material - scheme pages, product lists,
+                      hallmarking rules, lab directories, the Act - each
+                      file headed with the URL it was captured from and the
+                      date. This is what the helpdesk answers from.
+  data/bis/internal/  three short staff-only samples, fictional and labelled
+                      as such in their first lines, which exist only to
+                      demonstrate that desk material never reaches a public
+                      answer.
 
 Why files rather than database rows: before this, the seeded documents were
 catalogue entries with no bytes behind them, so a fresh checkout had nothing
@@ -31,8 +38,9 @@ from app.core.logging import get_logger
 
 log = get_logger(__name__)
 
-#: Where the human-readable source text lives.
-SOURCE_DIR = REPO_ROOT / "data" / "demo" / "source"
+#: Where the human-readable source text lives. Seed entries name a path
+#: relative to this, e.g. "bis/source/01_....md".
+SOURCE_DIR = REPO_ROOT / "data"
 
 #: A line of this alone starts a new page in the generated PDF.
 PAGE_BREAK = "---PAGE---"
@@ -186,8 +194,10 @@ def write_text(text: str, destination: Path) -> GeneratedFile:
 
 def read_source(name: str) -> str | None:
     """Read one source document, or None when the corpus is not present."""
-    path = SOURCE_DIR / name
-    if not path.is_file():
+    path = (SOURCE_DIR / name).resolve()
+    # Seed entries are product configuration, but a path that climbs out of
+    # data/ is a mistake worth refusing rather than following.
+    if SOURCE_DIR.resolve() not in path.parents or not path.is_file():
         return None
     return path.read_text(encoding="utf-8")
 

@@ -40,6 +40,7 @@ from app.tools.builtin.data_analysis import DataAnalysisTool
 from app.tools.builtin.document_reader import DocumentReaderTool
 from app.tools.builtin.reporting import ReportGeneratorTool
 from app.tools.builtin.retrieval import DocumentSearchTool, KnowledgeRetrievalTool
+from app.tools.builtin.standards import FindStandardTool
 
 log = get_logger(__name__)
 
@@ -53,6 +54,7 @@ IMPLEMENTATIONS: dict[str, Tool] = {
         CalculatorTool(),
         DataAnalysisTool(),
         ReportGeneratorTool(),
+        FindStandardTool(),
     )
 }
 

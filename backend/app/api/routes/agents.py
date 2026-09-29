@@ -28,7 +28,7 @@ from app.models import router as model_router
 from app.models.registry import get_registry
 from app.services import agents as agent_service
 from app.services import audit
-from app.services.access import is_administrator
+from app.services.access import is_administrator, is_guest
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -245,6 +245,13 @@ def get_agent(agent_id: str, user: CurrentUser, db: DbSession) -> AgentOut:
 
 @router.post("", response_model=AgentOut, status_code=status.HTTP_201_CREATED)
 def create_agent(payload: AgentCreate, user: CurrentUser, db: DbSession) -> AgentOut:
+    # Every agent is listed for every user, so a visitor's agent would be
+    # published to the whole public - persona, instructions and all.
+    if is_guest(user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Visitors can use the assistants but not create new ones.",
+        )
     agent = Agent(
         id=f"agent-{uuid.uuid4().hex[:12]}",
         name=payload.name.strip(),

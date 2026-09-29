@@ -136,6 +136,7 @@ def health(db: DbSession) -> HealthResponse:
         inference=inference,
         retrieval=retrieval,
         attachments=_attachment_limits(),
+        public_mode=settings.public_mode,
         # Kept for backwards compatibility with the earlier client.
         model_provider=inference.provider,
         implemented={

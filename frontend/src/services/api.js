@@ -39,6 +39,16 @@ export const api = {
   },
 
   /** End the session server-side, not just locally. */
+  /**
+   * Open an anonymous helpdesk session. Only offered when the server's
+   * health reports `publicMode`; the server refuses it otherwise.
+   */
+  async startGuest() {
+    const { token, user } = await http.post('/auth/guest');
+    setActiveToken(token);
+    return user;
+  },
+
   async logout() {
     try {
       await http.post('/auth/logout');

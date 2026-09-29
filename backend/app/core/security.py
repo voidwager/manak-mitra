@@ -66,6 +66,9 @@ class AccessLevel(StrEnum):
                 agent, may read the audit log.
       EMPLOYEE  sees their own uploads plus their assigned folders, and may
                 only file into folders they belong to.
+      PUBLIC    an anonymous visitor to the helpdesk. Reads the public
+                folders, may keep private uploads, and changes nothing that
+                anyone else can see - no publishing, no agents, no tools.
 
     `User.role` is a free-text job title for display ("Maintenance
     Engineer") and grants nothing. A third enum of aspirational roles used
@@ -75,6 +78,7 @@ class AccessLevel(StrEnum):
 
     OWNER = "OWNER"
     EMPLOYEE = "EMPLOYEE"
+    PUBLIC = "PUBLIC"
 
 
 # ---------------------------------------------------------------------------

@@ -103,6 +103,9 @@ class HealthResponse(ApiModel):
     model_provider: str
     implemented: dict[str, bool]
     attachments: AttachmentLimits | None = None
+    #: Whether anyone may open the assistant without an account. The client
+    #: reads this to skip the sign-in screen, rather than a build flag.
+    public_mode: bool = False
 
 
 class ModelRoute(ApiModel):

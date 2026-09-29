@@ -52,6 +52,7 @@ from app.models import ChatMessage, ModelError, get_gateway
 from app.models import router as model_router
 from app.models.registry import get_registry
 from app.rag import RetrievalResult, retrieve
+from app.services import language
 from app.rag.reader import DocumentPart, read_document
 from app.rag.retriever import Passage
 from app.services.agent_loop import (
@@ -218,6 +219,10 @@ class Turn:
 
     #: Which specialist SI-1 engaged, and why. Reported in the trace.
     dispatch: object = None
+
+    #: What retrieval searched for - the question, plus an English rewrite
+    #: when it was asked in another script.
+    search: object = None
 
     #: How the agentic loop ended, and what it spent getting there.
     loop: object = None
@@ -642,8 +647,12 @@ def prepare_turn(
     attached_documents = bind_chat_documents(db, user, conversation, attachments)
     attached_document_ids = list(attached_documents.values())
 
+    # The corpus is English. A question in another script is searched with
+    # an English rewrite alongside the original - see `app.services.language`.
+    search = language.search_query(query)
+
     retrieval = retrieve_for_turn(
-        db, user, query, agent, conversation_id=conversation.id,
+        db, user, search.text, agent, conversation_id=conversation.id,
         folder_scope=folder_scope,
     )
 
@@ -659,7 +668,7 @@ def prepare_turn(
     # forces an image to the vision model.
     if attached_document_ids:
         retrieval = _lead_with_attachments(
-            db, user, query, retrieval, attached_document_ids
+            db, user, search.text, retrieval, attached_document_ids
         )
 
     # A question about a document as a whole is served by reading it, not by
@@ -754,6 +763,7 @@ def prepare_turn(
         route=route,
         resolved_attachments=resolved,
         dispatch=dispatch,
+        search=search,
     )
 
 
@@ -867,6 +877,7 @@ def build_activity_trace(
     # loaded. The old blanket "recorded, not parsed" line predates the vision
     # path and became false the moment an image could genuinely be read.
     trace.extend(_dispatch_trace(turn))
+    trace.extend(_search_language_trace(turn))
     trace.extend(_attachment_trace(turn))
     trace.extend(_document_read_trace(turn))
     trace.extend(_retrieval_trace(retrieval))
@@ -893,6 +904,24 @@ def _dispatch_trace(turn: "Turn | None") -> list[dict]:
             "status": "done" if dispatch.dispatched else "skipped",
         }
     ]
+
+
+def _search_language_trace(turn: "Turn | None") -> list[dict]:
+    """Whether the question was translated for search, and into what.
+
+    Shown because it changes what the answer can cite: a reader who sees the
+    English query can judge whether the translation found the right thing.
+    """
+    search = getattr(turn, "search", None) if turn else None
+    if search is None:
+        return []
+    if search.translated:
+        return [
+            {"label": f"Searched in English: \"{search.translated}\"", "status": "done"}
+        ]
+    if search.note:
+        return [{"label": search.note, "status": "skipped"}]
+    return []
 
 
 def _attachment_trace(turn: "Turn | None") -> list[dict]:

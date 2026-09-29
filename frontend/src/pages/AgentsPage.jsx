@@ -39,6 +39,7 @@ export const AgentsPage = () => {
     deleteAgent,
     updateAgentConfig,
     currentUser,
+    isGuest,
     health,
   } = useApp();
 
@@ -92,16 +93,20 @@ export const AgentsPage = () => {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Autonomous Agents</h1>
-          <p className="page-subtitle">Specialized open-weight multimodal agents tuned for confidential industrial tasks.</p>
+          <h1 className="page-title">Specialists</h1>
+          <p className="page-subtitle">Each one searches its own part of the published BIS material and cites what it finds.</p>
         </div>
-        <button 
-          className="primary-btn"
-          onClick={() => setActiveModal({ type: 'createAgent' })}
-        >
-          <Plus size={16} />
-          <span>Create Agent</span>
-        </button>
+        {/* Visitors cannot create agents - the API refuses them, because a
+            new agent is listed for every user. */}
+        {!isGuest && (
+          <button
+            className="primary-btn"
+            onClick={() => setActiveModal({ type: 'createAgent' })}
+          >
+            <Plus size={16} />
+            <span>Create Agent</span>
+          </button>
+        )}
       </div>
 
       {/* Agents Grid */}

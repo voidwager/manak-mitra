@@ -270,7 +270,7 @@ def test_grounded_guardrail_replaces_the_no_retrieval_one(
     )
     grounded = stub.last_prompt[0].content
     assert "NO access to any document" not in grounded
-    assert "NEVER cite a document, SOP number, page, section or revision" in grounded
+    assert "NEVER cite a document, clause, section, page or circular" in grounded
 
     client.post(
         "/api/chat", headers=owner_headers, json={"message": "qqzzxx unmatchable token"}

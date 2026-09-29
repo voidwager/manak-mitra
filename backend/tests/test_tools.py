@@ -188,7 +188,7 @@ def test_retrieval_tools_inherit_the_callers_document_scope(
     client.patch(
         f"/api/documents/{created['id']}",
         headers=owner_headers,
-        json={"folder": "Executive Confidential"},
+        json={"folder": "BIS Internal"},
     )
     db_session.expire_all()
 
@@ -203,7 +203,7 @@ def test_retrieval_tools_inherit_the_callers_document_scope(
     assert "3820 rpm" in owner_result.content
     assert owner_result.citations
 
-    # Ananya is not cleared for Executive Confidential. The refusal echoes
+    # Ananya is not cleared for BIS Internal. The refusal echoes
     # her query back, so assert on the document's actual content - that is
     # what must not cross the boundary.
     # She may legitimately match her *own* documents on similar wording, so

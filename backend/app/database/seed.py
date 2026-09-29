@@ -1,8 +1,10 @@
-"""Seed the database with the synthetic demo dataset.
+"""Seed the database with the BIS helpdesk dataset.
 
-Everything here is fictional. This project has no access to real SYNQ data;
-the refinery, equipment tags, personnel and documents below are invented for
-development and demonstration (see Phase 18 of the project plan).
+The knowledge base is real: public BIS material captured from bis.gov.in and
+pib.gov.in, each file carrying its source URL and retrieval date (see
+data/bis/source/MANIFEST.md). The staff accounts and the three internal desk
+documents are fictional and say so - they exist to demonstrate access
+control, since no real BIS internal data belongs in a demo.
 
 Two honesty rules are enforced by this file:
 
@@ -64,136 +66,172 @@ USERS = [
     dict(
         id="user-sanyam",
         name="Sanyam Jain",
-        email="testowner@refinery.example",
-        role="Owner / Plant Administrator",
+        email="admin@bis-helpdesk.example",
+        role="Helpdesk Administrator",
         initials="SJ",
         access_level="OWNER",
-        scope_label="Full access - entire knowledge base",
+        scope_label="Full access - public sources, every desk, internal reports",
         assigned_folders=[
-            "All Units",
-            "CDU-II",
-            "Hydrocracker",
-            "Executive Confidential",
-            "Safety",
+            "Certification Desk",
+            "Hallmarking Desk",
+            "BIS Internal",
         ],
-        avatar_gradient="linear-gradient(135deg, #4F46E5, #06B6D4)",
+        avatar_gradient="linear-gradient(135deg, #1E3A8A, #0EA5E9)",
     ),
     dict(
         id="user-ananya",
         name="Ananya Roy",
-        email="testemployee@refinery.example",
-        role="Maintenance Engineer",
+        email="certification@bis-helpdesk.example",
+        role="Certification Officer",
         initials="AR",
         access_level="EMPLOYEE",
-        scope_label="Restricted - CDU-II unit and personal uploads",
-        assigned_folders=["CDU-II", "Personal Uploads"],
+        scope_label="Public sources + Certification Desk",
+        assigned_folders=["Certification Desk", "Personal Uploads"],
         avatar_gradient="linear-gradient(135deg, #10B981, #059669)",
     ),
     dict(
         id="user-dev",
         name="Dev Patel",
-        email="testemployee2@refinery.example",
-        role="HSE Safety Officer",
+        email="hallmarking@bis-helpdesk.example",
+        role="Hallmarking Officer",
         initials="DP",
         access_level="EMPLOYEE",
-        scope_label="Restricted - safety protocols and SOPs",
-        assigned_folders=["Safety", "Personal Uploads"],
+        scope_label="Public sources + Hallmarking Desk",
+        assigned_folders=["Hallmarking Desk", "Personal Uploads"],
         avatar_gradient="linear-gradient(135deg, #F59E0B, #D97706)",
     ),
 ]
 
+#: Every retrieval tool, for agents that should be able to read anything
+#: their scope allows.
+_READING_TOOLS = ["doc-search", "know-retrieval", "doc-reader"]
+
 AGENTS = [
     dict(
         id="si-1",
-        name="SI-1",
+        name="Manak Mitra",
         description=(
-            "The general assistant. Handles anything, and draws on the "
-            "specialists below when a question needs one."
+            "The general helpdesk. Answers anything about Indian Standards and "
+            "BIS services, and draws on the specialists below when a question "
+            "needs one."
         ),
         model=NO_PINNED_MODEL,
         icon="Sparkles",
         capabilities=[
-            "General assistance",
-            "Document search",
-            "Calculations",
+            "Plain-language answers",
+            "Hindi and regional languages",
+            "Cited BIS sources",
             "Specialist routing",
         ],
-        # Everything, because SI-1 borrows a specialist's grants when it
-        # engages one and needs its own set for everything else.
+        # Everything, because the universal agent borrows a specialist's
+        # grants when it engages one and needs its own set for everything else.
         tool_ids=[
-            "doc-search",
-            "know-retrieval",
-            "doc-reader",
+            *_READING_TOOLS,
+            "standard-finder",
             "data-analyzer",
             "calculator",
             "report-gen",
         ],
-        # No scope: SI-1 searches whatever the signed-in user may see, and a
-        # specialist narrows that further when one is engaged.
+        # No scope: searches whatever the caller may see, and a specialist
+        # narrows that further when one is engaged.
         folder_scope=[],
         is_universal=True,
     ),
     dict(
-        id="maint-intel",
-        name="Maintenance Intelligence",
-        description="Analyse maintenance reports, equipment history and inspection information.",
+        id="standards-finder",
+        name="Standards Finder",
+        description=(
+            "Finds which Indian Standard, Quality Control Order and scheme apply "
+            "to a product from BIS's published lists, and explains what an IS "
+            "number means."
+        ),
         model=NO_PINNED_MODEL,
-        icon="Wrench",
-        # Stated focus areas: what this agent is *for*. Free text, and the
-        # API reports it as `specialisations` rather than as capabilities,
-        # because nothing verifies it. What the agent can actually do is
-        # derived at request time from the runtime.
+        icon="Search",
+        # Stated focus areas: what this agent is *for*. Free text, reported
+        # as `specialisations`; what it can actually do is derived at
+        # request time from the runtime.
         capabilities=[
-            "Telemetry Analysis",
-            "Failure Diagnosis",
-            "Predictive Maintenance",
-            "Log Sheet Audit",
+            "Product to IS number",
+            "Compulsory certification (QCO) check",
+            "CRS electronics list",
+            "Standard lookup by IS number",
         ],
-        tool_ids=[
-            "doc-search",
-            "know-retrieval",
-            "doc-reader",
-            "data-analyzer",
-            "calculator",
-            "report-gen",
-        ],
-        # Maintenance work lives in the unit folders, not in Safety or the
-        # executive material - so this agent searches those and says so.
-        folder_scope=["CDU-II", "Hydrocracker", "All Units"],
+        tool_ids=[*_READING_TOOLS, "standard-finder"],
+        folder_scope=["Standards & QCOs"],
     ),
     dict(
-        id="sop-assistant",
-        name="SOP Assistant",
-        description="Answer questions using approved standard operating procedures.",
+        id="certification-guide",
+        name="Certification Guide",
+        description=(
+            "Explains BIS certification schemes - the ISI mark (Scheme-I), the "
+            "Compulsory Registration Scheme, the Foreign Manufacturers scheme - "
+            "and walks through documents, fees, timelines and licence rules."
+        ),
         model=NO_PINNED_MODEL,
         icon="FileText",
         capabilities=[
-            "SOP Lookup",
-            "Safety Protocols",
-            "Compliance Verification",
-            "LOTO Guidance",
+            "ISI mark licensing",
+            "CRS registration (R-number)",
+            "Foreign manufacturers (FMCS)",
+            "Fees and timelines",
         ],
-        tool_ids=["doc-search", "know-retrieval", "doc-reader"],
-        folder_scope=["Safety", "All Units"],
+        tool_ids=[*_READING_TOOLS, "standard-finder", "calculator"],
+        folder_scope=["Certification Schemes", "BIS Act & Rules", "Standards & QCOs"],
+    ),
+    dict(
+        id="hallmark-helper",
+        name="Hallmarking & Consumer Help",
+        description=(
+            "Helps consumers with hallmarked gold and silver - HUID, caratage, "
+            "testing your own jewellery, compensation - and with complaints "
+            "about a fake ISI mark or hallmark."
+        ),
+        model=NO_PINNED_MODEL,
+        icon="Gem",
+        capabilities=[
+            "Verify a HUID",
+            "Mandatory hallmarking districts",
+            "Purity shortfall compensation",
+            "Filing a complaint",
+        ],
+        tool_ids=[*_READING_TOOLS, "calculator"],
+        folder_scope=["Hallmarking", "Consumer Help", "BIS Act & Rules"],
+    ),
+    dict(
+        id="lab-locator",
+        name="Lab Locator",
+        description=(
+            "Finds BIS laboratories and BIS-recognised testing labs by state, "
+            "and explains how BIS recognises a lab."
+        ),
+        model=NO_PINNED_MODEL,
+        icon="FlaskConical",
+        capabilities=[
+            "Recognised labs by state",
+            "BIS's own laboratories",
+            "Labs for CRS products",
+            "Lab recognition process",
+        ],
+        tool_ids=[*_READING_TOOLS],
+        folder_scope=["Laboratories"],
     ),
     dict(
         id="doc-vision",
-        name="Document Vision",
+        name="Mark & Label Reader",
         description=(
-            "Intended for industrial images, diagrams and schematics. The "
-            "vision model this needs is not part of this deployment yet, so "
-            "the agent reports itself as Limited and answers from text only."
+            "Intended for photos of product labels, ISI marks and hallmarks. "
+            "The vision model this needs is not part of every deployment, so "
+            "without one the agent reports itself as Limited and answers from "
+            "text only."
         ),
         model=NO_PINNED_MODEL,
         icon="Eye",
-        # These were previously presented as working capabilities next to a
-        # deployment with no vision model and no OCR. They are the author's
-        # intent for the agent, and the derived capability list marks the
-        # vision half unavailable until Phase 13.
+        # The author's intent; the derived capability list marks the vision
+        # half unavailable until a vision model is configured.
         capabilities=[
-            "Schematic Audit",
-            "Thermal Image Inspection",
-            "Corrosion Assessment",
+            "Read an ISI mark and licence number",
+            "Read a HUID from a photo",
+            "Read a CRS R-number",
             "OCR Text Extraction",
         ],
         tool_ids=["img-analyzer", "doc-search", "doc-reader"],
@@ -207,8 +245,8 @@ TOOLS = [
         name="Document Search",
         category="Retrieval",
         description=(
-            "Find which documents mention a topic, with a matching snippet "
-            "from each. Scoped to what the signed-in user may see."
+            "Find which BIS documents mention a topic, with a matching snippet "
+            "from each. Scoped to what the caller may see."
         ),
     ),
     dict(
@@ -217,7 +255,7 @@ TOOLS = [
         category="RAG",
         description=(
             "Read the exact passages that answer a question and attach them "
-            "to the reply as citations. Scoped to the signed-in user."
+            "to the reply as citations. Scoped to the caller."
         ),
     ),
     dict(
@@ -226,7 +264,17 @@ TOOLS = [
         category="Retrieval",
         description=(
             "Read one document end to end, in order, so questions about a "
-            "document as a whole can be answered. Scoped to the signed-in user."
+            "document as a whole can be answered. Scoped to the caller."
+        ),
+    ),
+    dict(
+        id="standard-finder",
+        name="Standard Finder",
+        category="Standards",
+        description=(
+            "Match a product description to the rows of BIS's published lists "
+            "of products under compulsory certification - IS number, Quality "
+            "Control Order and scheme - each row cited."
         ),
     ),
     dict(
@@ -234,8 +282,8 @@ TOOLS = [
         name="Image Analyzer",
         category="Vision",
         description=(
-            "Vision analysis of equipment photos and thermograms. Needs the "
-            "image pipeline, which is not built yet (Phase 13)."
+            "Read marks and labels from a photo. Needs a vision model, which "
+            "is not configured on every deployment."
         ),
     ),
     dict(
@@ -252,8 +300,8 @@ TOOLS = [
         name="Calculator",
         category="Utility",
         description=(
-            "Evaluate an arithmetic expression exactly - unit conversions, "
-            "pressure drops, flow rates, tolerances."
+            "Evaluate an arithmetic expression exactly - fees, testing "
+            "charges, purity shortfall compensation."
         ),
     ),
     dict(
@@ -261,90 +309,118 @@ TOOLS = [
         name="Report Generator",
         category="Output",
         description=(
-            "Compile a structured inspection report, stamped with the real "
+            "Compile a structured compliance summary, stamped with the real "
             "evidence trail: sources consulted, tools run, model used."
         ),
     ),
 ]
 
-PUMP_SOP_EXCERPT = (
-    "Section 4.2: Maintenance for Pump P-204 requires electrical lock-out "
-    "tag-out (LOTO), mechanical seal flush verification, bearing housing oil "
-    "level checks and vibration spectral analysis. Acceptable vibration: "
-    "below 2.5 mm/s RMS. Operating temperature limit: 75 C."
+#: Quoted in the seeded example conversation. Taken verbatim from the
+#: Hallmarking consumer-protection page captured in file 09.
+HUID_EXCERPT = (
+    "BIS CARE- The Official mobile application of BIS now has the provision "
+    "for the common consumers to verify the authenticity of Hallmarked gold "
+    "jewellery items bearing a HUID number. The “Verify HUID” "
+    "feature can be utilised to verify the purity of the jewellery articles "
+    "before purchase."
 )
 
-DOCUMENTS = [
-    dict(
-        id="doc-1",
-        source="centrifugal-pump-inspection-sop.txt",
-        name="Centrifugal Pump Inspection SOP.pdf",
-        type="PDF",
-        folder="CDU-II",
-        owner_id="user-sanyam",
-        section="Section 4.2",
-        page=12,
-        excerpt=PUMP_SOP_EXCERPT,
-    ),
-    dict(
-        id="doc-2",
-        source="compressor-inspection-procedure.txt",
-        name="Compressor Inspection Procedure.pdf",
-        type="PDF",
-        folder="CDU-II",
-        owner_id="user-sanyam",
-        section="Section 2.1",
-        page=5,
-        excerpt=(
-            "Section 2.1: Multi-stage reciprocating compressor C-101 inspection "
-            "requires suction filter differential pressure verification and "
-            "intercooler condensation blowdown checks."
-        ),
-    ),
-    dict(
-        id="doc-3",
-        source="equipment-safety-guidelines.txt",
-        name="Equipment Safety Guidelines.pdf",
-        type="PDF",
-        folder="Safety",
-        owner_id="user-sanyam",
-        section="Section 1.4",
-        page=18,
-        excerpt=(
-            "Section 1.4: PPE mandatory zones include crude distillation unit "
-            "CDU-II, the hydrogen generation unit and high-pressure steam headers."
-        ),
-    ),
-    dict(
-        id="doc-4",
-        source="maintenance-history.csv",
-        name="Maintenance History.csv",
-        type="CSV",
-        folder="CDU-II",
-        owner_id="user-ananya",
-        section="Logs 2024-2026",
+#: Owner of the published corpus: public material is filed by the
+#: administrator, the one clearance allowed to publish into public folders.
+_PUBLISHER = "user-sanyam"
+
+
+def _public(doc_id: str, source: str, name: str, folder: str) -> dict:
+    return dict(
+        id=doc_id,
+        source=f"bis/source/{source}",
+        name=name,
+        type="MD",
+        folder=folder,
+        owner_id=_PUBLISHER,
+        section="",
         page=1,
-        excerpt=(
-            "Date,TagID,Equipment,Action,Technician,Status\n"
-            "2026-08-27,P-204,Centrifugal Pump,Seal Flush Cleaning,S. Jain,Completed\n"
-            "2026-08-14,C-101,Compressor,Valve Replacement,A. Roy,Completed"
-        ),
+        excerpt="",
+    )
+
+
+#: The published knowledge base. Every file under data/bis/source is public
+#: BIS material, with its source URL and retrieval date in its own header.
+DOCUMENTS = [
+    _public("bis-01", "01_scheme-I_ISI-mark_product-certification.md",
+            "Scheme-I (ISI Mark) Product Certification.md", "Certification Schemes"),
+    _public("bis-02", "02_fmcs_foreign-manufacturers-certification-scheme.md",
+            "Foreign Manufacturers Certification Scheme (FMCS).md", "Certification Schemes"),
+    _public("bis-03", "03_crs_compulsory-registration-scheme.md",
+            "Compulsory Registration Scheme (CRS).md", "Certification Schemes"),
+    _public("bis-04", "04_crs_product-list_IS-numbers.md",
+            "CRS Product List with IS Numbers.md", "Standards & QCOs"),
+    _public("bis-05", "05_qco_compulsory_certification_scheme-I_product-IS-list.md",
+            "Products under Compulsory Certification - Scheme-I.md", "Standards & QCOs"),
+    _public("bis-06", "06_qco_compulsory_certification_scheme-X_product-IS-list.md",
+            "Products under Compulsory Certification - Scheme-X.md", "Standards & QCOs"),
+    _public("bis-07", "07_eco-mark_scheme.md",
+            "ECO Mark Scheme.md", "Certification Schemes"),
+    _public("bis-08", "08_hallmarking_overview_faq_HUID_grades_charges.md",
+            "Hallmarking Overview and FAQ.md", "Hallmarking"),
+    _public("bis-09", "09_hallmarking_consumer_verify-HUID_test-own-jewellery_fees.md",
+            "Hallmarking for Consumers - HUID, Testing, Compensation.md", "Hallmarking"),
+    _public("bis-10", "10_hallmarking_mandatory-districts_by-phase.md",
+            "Mandatory Hallmarking Districts by Phase.md", "Hallmarking"),
+    _public("bis-11", "11_hallmarking_PIB-press-releases_HUID_fake-hallmark.md",
+            "Hallmarking Press Releases (PIB).md", "Hallmarking"),
+    _public("bis-12", "12_lab-recognition-scheme_how-BIS-recognises-labs.md",
+            "Laboratory Recognition Scheme.md", "Laboratories"),
+    _public("bis-13", "13_lab-directory_BIS-labs_and_CRS-recognised-lab-IS-list.md",
+            "BIS Laboratories Directory.md", "Laboratories"),
+    _public("bis-14", "14_lab-directory_BIS-recognised-labs_Group1_Group2_lists.md",
+            "BIS Recognised Laboratories (Group-1 and Group-2).md", "Laboratories"),
+    _public("bis-15", "15_consumer_complaints_BIS-CARE_fake-ISI-mark_misuse.md",
+            "Consumer Complaints and BIS CARE.md", "Consumer Help"),
+    _public("bis-16", "16_bis-act-2016_key-sections_offences-penalties-standard-mark.md",
+            "BIS Act 2016 - Key Sections.md", "BIS Act & Rules"),
+    _public("bis-17", "17_bis-conformity-assessment-regulations-2018_licence-conditions_scheme-I_scheme-II.md",
+            "BIS Conformity Assessment Regulations 2018.md", "BIS Act & Rules"),
+    _public("bis-18", "18_standards-basics_IS-number_Know-Your-Standard_buying-standards.md",
+            "Standards Basics - IS Numbers and Buying Standards.md", "Standards & QCOs"),
+    _public("bis-19", "19_standards-clubs_PIB.md",
+            "Standards Clubs (PIB).md", "Standards & QCOs"),
+    # --- Staff-only samples. Fictional, and each file says so in its first
+    # lines. They exist to demonstrate that desk and internal material never
+    # reaches a public answer; there is no real BIS internal data here.
+    dict(
+        id="int-cert",
+        source="bis/internal/certification-desk-escalation-guide.md",
+        name="Certification Desk Escalation Guide (sample).md",
+        type="MD",
+        folder="Certification Desk",
+        owner_id="user-ananya",
+        section="",
+        page=1,
+        excerpt="",
     ),
     dict(
-        id="doc-5",
-        source="hydrocracker-strategic-audit.txt",
-        name="Hydrocracker Unit Strategic Audit.pdf",
-        type="PDF",
-        folder="Executive Confidential",
+        id="int-hallmark",
+        source="bis/internal/hallmarking-desk-complaint-register.csv",
+        name="Hallmarking Complaint Register (sample).csv",
+        type="CSV",
+        folder="Hallmarking Desk",
+        owner_id="user-dev",
+        section="",
+        page=1,
+        excerpt="",
+    ),
+    dict(
+        id="int-analytics",
+        source="bis/internal/helpdesk-analytics-q2-2026.md",
+        name="Helpdesk Query Analytics Q2 2026 (sample).md",
+        type="MD",
+        folder="BIS Internal",
         owner_id="user-sanyam",
         is_confidential_owner_only=True,
-        section="Section 1.0",
+        section="",
         page=1,
-        excerpt=(
-            "Strategic audit (fictional): demo refinery capacity 15 MMTPA. "
-            "Hydrocracker unit HCU-I operating at 98.4 percent efficiency. "
-            "Restricted to executive clearance."
-        ),
+        excerpt="",
     ),
 ]
 
@@ -612,11 +688,11 @@ def _seed_conversations(db: Session) -> None:
         return
 
     conv = Conversation(
-        id="conv-demo-p204",
-        title="Pump P-204 inspection procedure",
+        id="conv-demo-huid",
+        title="Checking a gold hallmark",
         user_id="user-sanyam",
-        agent_id="maint-intel",
-        agent_name="Maintenance Intelligence",
+        agent_id="hallmark-helper",
+        agent_name="Hallmarking & Consumer Help",
     )
     db.add(conv)
     db.flush()
@@ -626,7 +702,7 @@ def _seed_conversations(db: Session) -> None:
             id="msg-demo-1",
             conversation_id=conv.id,
             sender="user",
-            text="What is the recommended inspection procedure for centrifugal pump P-204?",
+            text="How can I check that the hallmark on a gold chain is genuine before I buy it?",
             position=1,
         )
     )
@@ -636,25 +712,25 @@ def _seed_conversations(db: Session) -> None:
             conversation_id=conv.id,
             sender="assistant",
             text=(
-                "The inspection procedure for centrifugal pump P-204 is:\n\n"
-                "1. Verify isolation and safety clearance (LOTO locks applied)\n"
-                "2. Check for leaks around seals and gaskets\n"
-                "3. Inspect bearing temperature and vibration "
-                "(limits: below 75 C, below 2.5 mm/s RMS)\n"
-                "4. Validate alignment and coupling condition\n"
-                "5. Record all observations in the log sheet"
+                "Look for the HUID number in the hallmark and check it in the "
+                "BIS CARE app before you pay. Its \"Verify "
+                "HUID\" feature lets any consumer confirm the authenticity and "
+                "purity of a hallmarked gold article [1].\n\n"
+                "If the jewellery later tests below the purity it is marked "
+                "with, you are entitled to compensation of two times the "
+                "difference for the shortfall, plus the testing charges [1]."
             ),
             position=2,
             source={
-                "title": "Centrifugal Pump Inspection SOP.pdf",
-                "page": "Page 12 - Section 4.2",
-                "section": "Section 4.2",
-                "excerpt": PUMP_SOP_EXCERPT,
+                "title": "Hallmarking for Consumers - HUID, Testing, Compensation.md",
+                "page": "Page 1 · Hallmarking - Consumer Protection",
+                "section": "Hallmarking - Consumer Protection",
+                "excerpt": HUID_EXCERPT,
             },
             activity_trace=[
                 SEED_MARKER,
                 {"label": "Task received", "status": "done"},
-                {"label": "Retrieved SOP Section 4.2", "status": "done"},
+                {"label": "Retrieved Hallmarking - Consumer Protection", "status": "done"},
                 {"label": "Generated evidence-backed response", "status": "done"},
             ],
         )
@@ -669,10 +745,10 @@ def _seed_notifications(db: Session) -> None:
         Notification(
             id="notif-welcome",
             user_id=None,
-            title="Workbench connected to the database",
+            title="Welcome to Manak Mitra",
             description=(
-                "Agents, documents, tools and conversations are served from the API. "
-                "Model inference and document indexing are not implemented yet."
+                "Answers come from published BIS material, each one cited. "
+                "Ask in English, Hindi or your own language."
             ),
             read=False,
         )

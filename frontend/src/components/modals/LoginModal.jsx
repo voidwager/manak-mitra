@@ -15,7 +15,7 @@ import { ShieldCheck, Lock, User, ArrowRight, Sparkles, AlertCircle } from 'luci
 const DEV_DEMO_PASSWORD = 'demo1234';
 
 export const LoginModal = () => {
-  const { login, connectionError, retryConnection, health } = useApp();
+  const { login, enterAsGuest, connectionError, retryConnection, health } = useApp();
 
   // The server's own answer, not a build flag: whoever deployed it decides,
   // and the browser cannot be wrong about someone else's environment.
@@ -90,10 +90,36 @@ export const LoginModal = () => {
             <Sparkles size={28} />
           </div>
           <h2 className="login-title">
-            <span className="brand-green">SYNQ</span> Workbench
+            <span className="brand-green">Manak</span> Mitra
           </h2>
-          <p className="login-subtitle">Prototype sign-in. Pick an account below - the password is in the presentation.</p>
+          <p className="login-subtitle">
+            {health?.publicMode
+              ? 'Staff sign-in. Anyone can ask about Indian Standards without an account.'
+              : 'Staff sign-in. Pick an account below - the password is in the presentation.'}
+          </p>
         </div>
+
+        {health?.publicMode && (
+          <button
+            type="button"
+            className="login-submit-btn visitor-entry"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError(null);
+              try {
+                await enterAsGuest();
+              } catch (e) {
+                setError(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Continue as a visitor
+            <ArrowRight size={16} />
+          </button>
+        )}
 
         {(connectionError || error) && (
           <div className="login-alert" role="alert">
@@ -168,7 +194,7 @@ export const LoginModal = () => {
                 */}
               <input
                 type="email"
-                placeholder="testowner@refinery.example"
+                placeholder="admin@bis-helpdesk.example"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -467,6 +493,11 @@ export const LoginModal = () => {
           cursor: pointer;
           transition: all 0.2s ease;
           margin-top: 4px;
+        }
+
+        .visitor-entry {
+          width: 100%;
+          margin: 0 0 4px;
         }
 
         .login-submit-btn:hover:not(:disabled) {

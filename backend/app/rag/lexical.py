@@ -53,10 +53,46 @@ K1 = 1.5
 B = 0.75
 
 
+#: Everyday words for things the BIS corpus names formally. Applied to the
+#: query only: "labs in Maharashtra" should reach a list of "laboratories".
+_ALIASES = {
+    "lab": ("laboratory",),
+    # Four letters, so plural folding leaves these alone.
+    "labs": ("lab", "laboratory"),
+    "fees": ("fee", "charge"),
+    "cert": ("certification",),
+    "licence": ("license",),
+    "license": ("licence",),
+    "verify": ("verification",),
+    "register": ("registration",),
+    "fee": ("charge",),
+    "fake": ("misuse", "spurious"),
+}
+
+
+def _stem(token: str) -> str:
+    """Plural folding for plain words, nothing more.
+
+    "laboratories" -> "laboratory", "labs" -> "lab", "charges" -> "charge".
+    Identifiers (anything with a digit or separator) are left alone, and so
+    are short words, where a trailing "s" is usually not a plural ("gas",
+    "bis").
+    """
+    if len(token) <= 4 or not token.isalpha():
+        return token
+    if token.endswith("ies"):
+        return token[:-3] + "y"
+    if token.endswith(("sses", "ss", "us", "is")):
+        return token
+    if token.endswith("s"):
+        return token[:-1]
+    return token
+
+
 def tokenize(text: str) -> list[str]:
-    """Lowercase, keep identifiers intact, drop trivial stopwords."""
+    """Lowercase, keep identifiers intact, fold plurals, drop stopwords."""
     tokens = _TOKEN.findall(text.lower())
-    return [t for t in tokens if t not in _STOPWORDS]
+    return [_stem(t) for t in tokens if t not in _STOPWORDS]
 
 
 def expand_query_tokens(tokens: list[str]) -> list[str]:
@@ -68,6 +104,7 @@ def expand_query_tokens(tokens: list[str]) -> list[str]:
     """
     expanded = list(tokens)
     for token in tokens:
+        expanded.extend(_ALIASES.get(token, ()))
         if any(sep in token for sep in "-_./"):
             parts = [p for p in re.split(r"[-_./]", token) if p]
             if len(parts) > 1:

@@ -78,7 +78,7 @@ def test_login_returns_a_token_and_the_user(client):
     response = client.post(
         "/api/auth/login",
         json={
-            "email": "testemployee@refinery.example",
+            "email": "certification@bis-helpdesk.example",
             "password": DEMO_PASSWORD,
         },
     )
@@ -107,7 +107,7 @@ def test_a_wrong_password_is_refused(client):
     response = client.post(
         "/api/auth/login",
         json={
-            "email": "testemployee@refinery.example",
+            "email": "certification@bis-helpdesk.example",
             "password": "not-the-password",
         },
     )
@@ -129,7 +129,7 @@ def test_an_unknown_account_and_a_wrong_password_are_indistinguishable(client):
     wrong = client.post(
         "/api/auth/login",
         json={
-            "email": "testemployee@refinery.example",
+            "email": "certification@bis-helpdesk.example",
             "password": "not-the-password",
         },
     )
@@ -141,7 +141,7 @@ def test_an_unknown_account_and_a_wrong_password_are_indistinguishable(client):
 def test_login_without_a_password_is_rejected(client):
     """There is no identifier-only sign-in any more."""
     response = client.post(
-        "/api/auth/login", json={"email": "testemployee@refinery.example"}
+        "/api/auth/login", json={"email": "certification@bis-helpdesk.example"}
     )
     assert response.status_code == 422
 

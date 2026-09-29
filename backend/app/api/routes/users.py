@@ -12,7 +12,8 @@ from app.api.schemas import (
     SettingsUpdate,
     UserOut,
 )
-from app.core.security import verify_password
+from app.core.config import settings
+from app.core.security import AccessLevel, verify_password
 from app.database.models import User, UserSettings
 from app.services import auth
 from app.models import router as model_router
@@ -32,7 +33,36 @@ def list_users(db: DbSession) -> list[User]:
     On a real deployment this would be removed - an employee list is worth
     having - but the demo needs its personas visible to be usable at all.
     """
-    return list(db.scalars(select(User).order_by(User.created_at)))
+    # Visitors are one row each and would bury the staff personas.
+    return list(
+        db.scalars(
+            select(User)
+            .where(User.access_level != AccessLevel.PUBLIC)
+            .order_by(User.created_at)
+        )
+    )
+
+
+@router.post("/auth/guest", response_model=LoginResponse)
+def guest(request: Request, db: DbSession) -> LoginResponse:
+    """Start an anonymous helpdesk session - no account, no password.
+
+    Refused when public mode is off, so a staff-only deployment has no
+    anonymous way in at all rather than one that is merely unadvertised.
+    """
+    if not settings.public_mode:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Public access is not enabled on this deployment.",
+        )
+    signed_in = auth.start_guest_session(
+        db, user_agent=request.headers.get("user-agent", "")
+    )
+    return LoginResponse(
+        token=signed_in.token,
+        user=UserOut.model_validate(signed_in.user),
+        expires_at=signed_in.session.expires_at,
+    )
 
 
 @router.post("/auth/login", response_model=LoginResponse)

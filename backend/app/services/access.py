@@ -14,7 +14,7 @@ from sqlalchemy import Select, and_, or_, select
 from app.core.security import AccessLevel
 from app.database.models import Document, User
 
-#: Every document is in exactly one of three places, and the folder alone
+#: Every document is in exactly one of four places, and the folder alone
 #: decides which. There is deliberately no second flag: two mechanisms for
 #: one question is how a document ends up visible under one rule and hidden
 #: under the other.
@@ -25,9 +25,30 @@ from app.database.models import Document, User
 #:   RESTRICTED_FOLDER  owner clearance only. One folder, not a per-document
 #:                      flag, so "who can see this" is answerable by looking
 #:                      at where it is filed.
-#:   anything else      shared. Visible to whoever is assigned that folder.
+#:   PUBLIC_FOLDERS     published BIS material. Everyone, visitors included.
+#:   anything else      an internal desk folder. Visible to the staff
+#:                      assigned to it.
 PERSONAL_FOLDER = "Personal Uploads"
-RESTRICTED_FOLDER = "Executive Confidential"
+RESTRICTED_FOLDER = "BIS Internal"
+
+#: The published knowledge base: what any member of the public may read and
+#: the assistant may cite to them. Everything here is public BIS material.
+#: A visitor's access is this list itself, read at request time - not a copy
+#: stamped onto their row when they arrived - so adding a folder here
+#: reaches every visitor at once, and removing one withdraws it at once.
+PUBLIC_FOLDERS = (
+    "Certification Schemes",
+    "Hallmarking",
+    "Standards & QCOs",
+    "Laboratories",
+    "Consumer Help",
+    "BIS Act & Rules",
+)
+
+
+def is_guest(user: User) -> bool:
+    """An anonymous helpdesk visitor rather than a member of staff."""
+    return user.access_level == AccessLevel.PUBLIC
 
 
 def _shared_folders(user: User) -> list[str]:
@@ -37,12 +58,20 @@ def _shared_folders(user: User) -> list[str]:
     comes from ownership and restricted access from clearance, so listing
     either in `assigned_folders` - by an admin's mistake or a typo - must
     hand out nothing.
+
+    The public folders are everyone's: a member of staff never sees less
+    than an anonymous visitor. Assignment only matters for the internal desk
+    folders on top of them. A visitor's grant is the public set and only the
+    public set, whatever their row says, so no stored value can widen it.
     """
-    return [
+    if is_guest(user):
+        return list(PUBLIC_FOLDERS)
+    assigned = [
         f
         for f in (user.assigned_folders or [])
-        if f not in (PERSONAL_FOLDER, RESTRICTED_FOLDER)
+        if f not in (PERSONAL_FOLDER, RESTRICTED_FOLDER, *PUBLIC_FOLDERS)
     ]
+    return [*PUBLIC_FOLDERS, *assigned]
 
 
 def visible_documents_query(
@@ -193,7 +222,17 @@ def assignable_folders(user: User) -> list[str]:
     """
     if is_administrator(user):
         return []
-    return [PERSONAL_FOLDER, *_shared_folders(user)]
+    # A visitor may keep their own files, but filing into a public folder
+    # would publish to every other visitor through the assistant's answers.
+    if is_guest(user):
+        return [PERSONAL_FOLDER]
+    # Reading the public folders is everyone's; publishing into them puts a
+    # document in front of every visitor as an authoritative BIS source, so
+    # that stays with administrator clearance. Staff file into their desks.
+    return [
+        PERSONAL_FOLDER,
+        *(f for f in _shared_folders(user) if f not in PUBLIC_FOLDERS),
+    ]
 
 
 def publish_error(user: User, document: Document, folder: str) -> str | None:
@@ -277,7 +316,7 @@ def known_folders(session) -> list[str]:
     """
     from app.database.models import User as UserModel  # local import: cycle
 
-    folders: set[str] = {PERSONAL_FOLDER, RESTRICTED_FOLDER}
+    folders: set[str] = {PERSONAL_FOLDER, RESTRICTED_FOLDER, *PUBLIC_FOLDERS}
     folders.update(f for f in session.scalars(select(Document.folder)) if f)
     for assigned in session.scalars(select(UserModel.assigned_folders)):
         folders.update(f for f in (assigned or []) if f)

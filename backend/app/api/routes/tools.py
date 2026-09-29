@@ -17,6 +17,7 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.api.schemas import ToolOut
 from app.database.models import Tool
 from app.services import audit
+from app.services.access import is_administrator
 from app.tools import registry
 
 router = APIRouter(prefix="/tools", tags=["tools"])
@@ -48,6 +49,15 @@ def list_tools(user: CurrentUser, db: DbSession) -> list[ToolOut]:
 
 @router.post("/{tool_id}/toggle", response_model=list[ToolOut])
 def toggle_tool(tool_id: str, user: CurrentUser, db: DbSession) -> list[ToolOut]:
+    # The switch is global: turning a tool off removes it from every agent
+    # for every user. That is an operator's decision, and on a public
+    # helpdesk leaving it open would let any visitor disable the service.
+    if not is_administrator(user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Only administrator clearance can switch a tool on or off.",
+        )
+
     tool = db.get(Tool, tool_id)
     if tool is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Tool not found")

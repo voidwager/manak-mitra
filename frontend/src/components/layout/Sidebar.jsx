@@ -24,8 +24,9 @@ import {
 export const Sidebar = () => {
   const { 
     currentUser,
+    isGuest,
     logout,
-    activeTab, 
+    activeTab,
     setActiveTab, 
     handleNewChat, 
     conversations,
@@ -85,11 +86,15 @@ export const Sidebar = () => {
   // Performance is administrator-only, so it is filtered out rather than
   // shown disabled: an item that is visible but refuses to open reads as a
   // fault, and there is nothing here for a non-administrator to act on.
+  //
+  // A visitor gets the helpdesk, not the back office: they can ask, see the
+  // specialists and browse the published sources, but Tools is an operator
+  // switchboard they could not use (the API refuses them).
   const mainNavItems = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'agents', label: 'Agents', icon: Users },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'tools', label: 'Tools', icon: Wrench },
+    { id: 'chat', label: 'Ask', icon: MessageSquare },
+    { id: 'agents', label: isGuest ? 'Specialists' : 'Agents', icon: Users },
+    { id: 'documents', label: isGuest ? 'BIS Sources' : 'Documents', icon: FileText },
+    ...(isGuest ? [] : [{ id: 'tools', label: 'Tools', icon: Wrench }]),
     ...(currentUser?.accessLevel === 'OWNER'
       ? [{ id: 'performance', label: 'Performance', icon: BarChart3 }]
       : []),
@@ -309,7 +314,7 @@ export const Sidebar = () => {
                 }}
               >
                 <LogOut size={15} />
-                <span>Sign Out / Switch User</span>
+                <span>{isGuest ? 'Staff sign-in' : 'Sign Out / Switch User'}</span>
               </button>
             </div>
           )}

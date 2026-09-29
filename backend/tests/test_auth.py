@@ -25,8 +25,8 @@ from app.core.security import (
 from app.database.base import utcnow
 from tests.conftest import DEMO_PASSWORD, sign_in
 
-OWNER_EMAIL = "testowner@refinery.example"
-ENGINEER_EMAIL = "testemployee@refinery.example"
+OWNER_EMAIL = "admin@bis-helpdesk.example"
+ENGINEER_EMAIL = "certification@bis-helpdesk.example"
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +275,7 @@ def test_an_employee_cannot_revoke_someone_elses_sessions(client, engineer_heade
 
 def test_owner_clearance_can_end_a_users_sessions(client, owner_headers):
     """The control that makes "someone left" actionable."""
-    token = sign_in(client, "testemployee2@refinery.example")
+    token = sign_in(client, "hallmarking@bis-helpdesk.example")
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/documents", headers=headers).status_code == 200
 

@@ -183,9 +183,27 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     let cancelled = false;
 
-    const bootstrap = async () => {
+    // On a public helpdesk a visitor with no session is let straight in as
+    // a guest - the sign-in screen is for staff, and putting it in front of
+    // a consumer asking about a hallmark would turn them away.
+    const enterPublicly = async (status) => {
+      if (!status?.publicMode) return;
       try {
-        const status = await api.getHealth();
+        const user = await api.startGuest();
+        if (!cancelled) {
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+          await loadWorkspace();
+        }
+      } catch (error) {
+        if (!cancelled) reportError(error, 'open the helpdesk');
+      }
+    };
+
+    const bootstrap = async () => {
+      let status;
+      try {
+        status = await api.getHealth();
         if (cancelled) return;
         setHealth(status);
         setConnectionError(null);
@@ -200,6 +218,7 @@ export const AppProvider = ({ children }) => {
       // is still live - it may have been revoked, expired, or idled out
       // since this browser last used it.
       if (!getActiveToken()) {
+        await enterPublicly(status);
         if (!cancelled) setBootstrapping(false);
         return;
       }
@@ -217,6 +236,8 @@ export const AppProvider = ({ children }) => {
         setActiveToken(null);
         if (!cancelled && !(error instanceof ApiError && error.status === 401)) {
           reportError(error, 'restore session');
+        } else {
+          await enterPublicly(status);
         }
       } finally {
         if (!cancelled) setBootstrapping(false);
@@ -248,6 +269,20 @@ export const AppProvider = ({ children }) => {
     },
     [loadWorkspace, reportError],
   );
+
+  const enterAsGuest = useCallback(async () => {
+    try {
+      const user = await api.startGuest();
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      setActiveTab('chat');
+      await loadWorkspace();
+      return user;
+    } catch (error) {
+      reportError(error, 'open the helpdesk');
+      throw error;
+    }
+  }, [loadWorkspace, reportError]);
 
   const logout = useCallback(async () => {
     // Ends the session server-side, so the token is dead everywhere rather
@@ -967,6 +1002,10 @@ export const AppProvider = ({ children }) => {
     bootstrapping,
     login,
     logout,
+    enterAsGuest,
+    // A helpdesk visitor rather than staff. Decided by the server's access
+    // level, so the UI hides staff controls the API would refuse anyway.
+    isGuest: currentUser?.accessLevel === 'PUBLIC',
 
     // backend status
     health,

@@ -122,7 +122,16 @@ class RetrievalResult:
 def _lexical_ranking(candidates: list[Candidate], query: str) -> list[str]:
     index = Bm25Index()
     for candidate in candidates:
-        index.add(candidate.chunk_id, candidate.text)
+        # The title and heading are what a passage is *about*, and a chunk
+        # cut from the middle of "Compulsory Registration Scheme (CRS)" may
+        # never repeat those words. Scored with them, "how do I register
+        # under CRS" reaches the CRS document rather than any page that
+        # happens to say "register". Only the ranking sees this; the passage
+        # the model reads and cites is the chunk text alone.
+        index.add(
+            candidate.chunk_id,
+            f"{candidate.document_name}\n{candidate.section}\n{candidate.text}",
+        )
     return [chunk_id for chunk_id, _ in index.search(query)]
 
 

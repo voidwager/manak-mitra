@@ -67,7 +67,7 @@ def test_folders_lists_the_namespace_and_what_the_user_may_use(
     # Ananya is assigned to CDU-II, plus her personal namespace.
     assert set(body["assignable"]) == {"Personal Uploads", "CDU-II"}
     # The full namespace is informational and is wider than her grant.
-    assert set(body["all"]) >= {"CDU-II", "Safety", "Executive Confidential"}
+    assert set(body["all"]) >= {"CDU-II", "Safety", "BIS Internal"}
     assert set(body["assignable"]) <= set(body["all"])
 
 
@@ -278,7 +278,7 @@ def test_marking_confidential_removes_a_document_from_other_users_retrieval(
     # Classifying files it into the one restricted folder, because that is
     # what the access rules actually read.
     classified = client.get(f"/api/documents/{doc['id']}", headers=owner_headers).json()
-    assert classified["folder"] == "Executive Confidential"
+    assert classified["folder"] == "BIS Internal"
     assert classified["visibility"] == "restricted"
 
 
