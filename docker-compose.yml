@@ -1,0 +1,31 @@
+# Development services for the SYNQ Workbench.
+#
+# Scope note: this brings up PostgreSQL only. The application itself is not
+# containerised yet - run the backend and frontend on the host (see README).
+# Full containerisation belongs with the on-premise deployment milestone.
+#
+#   docker compose up -d
+#   # then set DATABASE_URL in .env to the value printed in the README
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: synq-workbench-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-synq}
+      # Set POSTGRES_PASSWORD in your .env. There is no default on purpose.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-synq_workbench}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-synq} -d ${POSTGRES_DB:-synq_workbench}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -1,0 +1,93 @@
+# SYNQ Workbench - the deployable stack.
+#
+# Separate from docker-compose.yml, which brings up PostgreSQL alone for
+# local development against the host-run app. This file runs the packaged
+# application.
+#
+#   docker compose -f docker-compose.deploy.yml up -d --build
+#
+# Required in .env before starting:
+#   DEMO_PASSWORD   the seed refuses to run without it outside development
+#   GROQ_API_KEY    and/or GEMINI_API_KEY
+#
+# PostgreSQL is opt-in, under the `postgres` profile. The default is the
+# SQLite fallback on a named volume, which is enough for a demo deployment
+# and one less moving part:
+#
+#   docker compose -f docker-compose.deploy.yml --profile postgres up -d
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: synq-workbench
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Secrets come from the environment, never the image. .env is
+      # gitignored and is not copied in by the build - see .dockerignore.
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+
+      # No default on purpose. The seed refuses to run without it outside
+      # development, because the built-in one is published in the repository
+      # and the seeded owner account carries full clearance.
+      DEMO_PASSWORD: ${DEMO_PASSWORD:?set DEMO_PASSWORD in .env}
+
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-groq}
+      MODEL_NAME: ${MODEL_NAME:-qwen/qwen3.8-27b}
+      MODEL_VISION: ${MODEL_VISION:-}
+      MODEL_REASONING: ${MODEL_REASONING:-}
+      MODEL_FAST: ${MODEL_FAST:-}
+      MODEL_TRANSCRIPTION: ${MODEL_TRANSCRIPTION:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+
+      # Empty means the SQLite fallback on the volume below. Point it at the
+      # postgres service to use that instead.
+      DATABASE_URL: ${DATABASE_URL:-}
+
+      # The UI is served by this same process, so there is no cross-origin
+      # request to allow. Kept configurable for a split deployment.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    volumes:
+      # Everything that must survive a rebuild. Without this, uploaded
+      # documents and the database live in the container's writable layer
+      # and are discarded by the next deploy.
+      - workbench_data:/data
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import urllib.request, sys
+          sys.exit(0 if urllib.request.urlopen(
+              "http://127.0.0.1:8000/api/health", timeout=4).status == 200 else 1)
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:17-alpine
+    container_name: synq-workbench-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-synq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-synq_workbench}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-synq} -d ${POSTGRES_DB:-synq_workbench}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  workbench_data:
+  postgres_data:

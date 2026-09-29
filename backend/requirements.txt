@@ -1,0 +1,50 @@
+# SYNQ Workbench - backend dependencies
+#
+# Install:
+#   python -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# Lower bounds only. This is an early prototype and we would rather the team
+# install cleanly on Python 3.10+ than fight a lockfile. A lockfile arrives
+# with containerised deployment.
+
+# --- Web framework ---------------------------------------------------------
+fastapi>=0.115
+uvicorn[standard]>=0.32        # ASGI server; run via `python -m uvicorn`
+
+# --- Validation and settings ----------------------------------------------
+pydantic>=2.9
+pydantic-settings>=2.6
+python-dotenv>=1.0             # pydantic-settings reads .env through this
+
+# --- Database --------------------------------------------------------------
+sqlalchemy>=2.0.36
+psycopg[binary]>=3.2           # PostgreSQL driver. Unused on the SQLite
+                               # development fallback, but required the
+                               # moment DATABASE_URL points at PostgreSQL.
+
+# --- HTTP ------------------------------------------------------------------
+httpx>=0.27                    # model gateway -> any OpenAI-compatible
+                               # endpoint (Groq now, vLLM/Ollama later)
+python-multipart>=0.0.12       # FastAPI needs this to parse file uploads
+
+# --- Retrieval (RAG) -------------------------------------------------------
+# Text extraction for the document indexer. Both are pure Python, so they
+# install without a compiler and run in an air-gapped environment.
+#
+# They are imported lazily: the API boots without them and /api/health
+# reports which formats the running install can actually parse. Only .pdf
+# and .docx extraction depend on them - .txt, .md and .csv need nothing.
+pypdf>=5.0                     # PDF text extraction
+python-docx>=1.1               # DOCX text extraction
+
+# Embeddings deliberately add no dependency. Semantic retrieval calls an
+# OpenAI-compatible /embeddings endpoint over httpx (Ollama, TEI, vLLM,
+# Infinity), and BM25 lexical retrieval is pure standard library - so a
+# checkout with no embedding runtime still retrieves.
+
+# --- Testing ---------------------------------------------------------------
+# Not imported by app/, only by tests/. Kept here rather than in a separate
+# file so `pip install -r requirements.txt` gives a working checkout in one
+# step - split this out if the image size ever matters.
+pytest>=8.3

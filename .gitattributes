@@ -1,0 +1,17 @@
+# Line endings.
+#
+# Shell scripts and Dockerfiles are executed inside Linux containers. A
+# CRLF checkout on Windows gives them "\r" at the end of the shebang, and
+# the container fails with the memorable and unhelpful:
+#
+#     /bin/sh^M: bad interpreter: No such file or directory
+#
+# Forcing LF here means the file is correct in the image regardless of which
+# machine committed it.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.dockerfile    text eol=lf
+entrypoint.sh   text eol=lf
+
+# Batch files are the mirror image: they run on Windows and want CRLF.
+*.bat           text eol=crlf

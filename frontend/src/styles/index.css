@@ -1,0 +1,285 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/*
+ * Design tokens.
+ *
+ * Almost every component reads from these rather than hard-coding colour, so
+ * this file is where the product's look actually lives.
+ *
+ * Three rules it follows, and the previous palette broke all three:
+ *
+ *   Colour carries meaning. Green means ready, amber means degraded, red
+ *   means failed. Nothing else is coloured for decoration - a brand hue
+ *   smeared across every surface leaves nothing for status to say.
+ *
+ *   The accent is the opposite of the page. Black on white, white on black,
+ *   so the primary action is the highest-contrast thing on screen without a
+ *   hue having to announce it. The old palette paired an indigo interface
+ *   with a green wordmark, which is two brand colours arguing.
+ *
+ *   Neutrals do the work. Surfaces step in even increments off true black or
+ *   true white. The old ramp jumped #000 - #0A - #14 - #22 with a blue cast,
+ *   which is what made cards read as tinted rather than raised.
+ */
+
+:root {
+  /* --- surfaces --------------------------------------------------------
+   * White is white. The page is #FFFFFF, not an off-white that reads as a
+   * screenshot of white, and the steps above it are grey rather than a
+   * tinted blue - a blue-grey card on a white page is the tell that gave
+   * the old build its unfinished look.
+   */
+  --bg-app: #FFFFFF;
+  --bg-sidebar: #FFFFFF;
+  --bg-workspace: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F5F5F5;
+  --bg-input: #FFFFFF;
+  --bg-hover: #F0F0F0;
+  --bg-active: #E6E6E6;
+
+  --text-primary: #000000;
+  --text-secondary: #5A5A5A;
+  /* Chosen against the background rather than by eye: at #8E8E8E this
+     was 3.3:1 on white, below AA for the caption-sized text it is used
+     on. Every pair in this file clears 4.5:1. */
+  --text-muted: #767676;
+
+  /* --- the accent is the opposite of the page --------------------------
+   * Black on white, white on black. A primary button is the highest
+   * contrast thing on the screen, which is what makes it read as the
+   * primary button without a colour having to announce it - and it leaves
+   * every colour in the system free to mean something.
+   */
+  --accent-primary: #000000;
+  --accent-primary-hover: #262626;
+  --accent-contrast: #FFFFFF;
+  /* Tints of the accent, for selected rows and quiet badges. Alpha rather
+     than a fixed grey, so they sit correctly on any surface under them. */
+  --accent-light: rgba(0, 0, 0, 0.06);
+  --accent-text: #000000;
+
+  --user-msg-bg: #F0F0F0;
+  --user-msg-text: #000000;
+
+  --border-light: rgba(0, 0, 0, 0.09);
+  --border-subtle: #E4E4E4;
+  --border-strong: #C8C8C8;
+
+  /* --- elevation -------------------------------------------------------
+   * Two stops each, not one. A single blur reads as a grey halo; real
+   * shadows are a tight contact shadow that anchors the edge plus a wide
+   * ambient one that gives the distance. The tight stop stays nearly
+   * constant as things rise, the wide one grows - which is what makes the
+   * difference between a card and a dialog legible.
+   *
+   * --shadow-rim is the outlier: it does nothing here, and carries all of
+   * the elevation on the dark theme. See the dark block for why.
+   */
+  --shadow-sm:
+    0 1px 1px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg:
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.10);
+  --shadow-floating:
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 18px 44px rgba(0, 0, 0, 0.13);
+  --shadow-rim: 0 0 0 0 transparent;
+
+  /* --- status: the only colour in the system ---------------------------
+   * Now that nothing else is coloured, these carry all of it. Ready,
+   * degraded and failed have to be distinguishable at the size of a 6px
+   * dot, so they are saturated rather than tasteful.
+   */
+  --success: #12873F;
+  --success-bg: #E4F5EA;
+  --warning: #A85B00;
+  --warning-bg: #FBEFDF;
+  --danger: #C22B2B;
+  --danger-bg: #FBE9E9;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+}
+
+[data-theme='dark'] {
+  /* Black is black. The app sits on #000000; cards lift off it in small,
+     even steps so depth reads as depth without anything going grey-blue. */
+  --bg-app: #000000;
+  --bg-sidebar: #000000;
+  --bg-workspace: #000000;
+  --bg-card: #0D0D0D;
+  --bg-card-subtle: #131313;
+  --bg-input: #0D0D0D;
+  --bg-hover: #1A1A1A;
+  --bg-active: #242424;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #A6A6A6;
+  --text-muted: #787878;
+
+  --accent-primary: #FFFFFF;
+  --accent-primary-hover: #E0E0E0;
+  --accent-contrast: #000000;
+  --accent-light: rgba(255, 255, 255, 0.10);
+  --accent-text: #FFFFFF;
+
+  --user-msg-bg: #1A1A1A;
+  --user-msg-text: #FFFFFF;
+
+  --border-light: rgba(255, 255, 255, 0.10);
+  --border-subtle: #242424;
+  --border-strong: #383838;
+
+  /* --- elevation, which black shadows cannot carry ----------------------
+   * The page is #000000. A black shadow on it is invisible - there is
+   * nothing darker to cast. The old tokens were 75% black blurs doing
+   * nothing at all, which is why a floating card read as pasted on rather
+   * than lifted.
+   *
+   * Two things replace it. The shadows stay, because they still work where
+   * a raised thing overlaps a lighter surface rather than the page. And
+   * --shadow-rim adds the hairline of light along the top edge that a lit
+   * surface would actually have. That rim, over surfaces that get lighter
+   * as they rise (#000 page, #0D0D0D card, #131313, #1A1A1A), is what
+   * carries elevation here - the same job, done with light instead of
+   * dark because dark has run out.
+   */
+  --shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md:
+    0 2px 4px rgba(0, 0, 0, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg:
+    0 4px 8px rgba(0, 0, 0, 0.6),
+    0 16px 36px rgba(0, 0, 0, 0.5);
+  --shadow-floating:
+    0 6px 12px rgba(0, 0, 0, 0.6),
+    0 24px 56px rgba(0, 0, 0, 0.55);
+  --shadow-rim: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  /* Brighter than their light-mode counterparts. The same green that reads
+     clearly on white disappears against black at dot size. */
+  --success: #2BD46B;
+  --success-bg: rgba(43, 212, 107, 0.16);
+  --warning: #F0A93B;
+  --warning-bg: rgba(240, 169, 59, 0.16);
+  --danger: #FF5F56;
+  --danger-bg: rgba(255, 95, 86, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.5;
+  /* Slightly tightened: the default tracking on this face reads loose at
+     interface sizes and is part of what made the old build look unset. */
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+/* A visible focus ring, on the accent, for anything reached by keyboard.
+   The previous build had none, so tabbing through it was guesswork. */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-primary);
+  color: var(--accent-contrast);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Inset by a transparent border so the bar reads as a thin line with room
+     around it rather than a slab against the content. */
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: content-box;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-dot {
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+/* Anyone who has asked their system for less motion gets less of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

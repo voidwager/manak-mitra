@@ -1,0 +1,118 @@
+DEMO REFINERY
+EQUIPMENT SAFETY GUIDELINES
+
+Document reference: HSE-GEN-0014
+Revision: 11
+Issued: 3 February 2026
+Custodian: Health, Safety and Environment
+
+FICTIONAL DOCUMENT. This describes an invented facility and is provided for
+software demonstration only. It is not an approved safety document and must
+never be relied on for real work.
+
+1.0 PURPOSE
+
+These guidelines set the minimum safety requirements applying to all
+personnel entering process areas of the demo refinery, and to all work
+carried out on process equipment.
+
+Where a unit procedure is more restrictive than this document, the unit
+procedure applies. This document never relaxes a unit requirement.
+
+1.1 Responsibility
+
+Every person entering a process area is responsible for their own compliance
+and for stopping work they believe to be unsafe. Stopping work is never a
+disciplinary matter, and no person requires permission to do so.
+
+---PAGE---
+
+1.4 PERSONAL PROTECTIVE EQUIPMENT
+
+PPE mandatory zones are Crude Distillation Unit II, the hydrogen generation
+unit, the hydrocracker unit HCU-I, and all high-pressure steam headers above
+15 barg.
+
+Within a mandatory zone the following are worn at all times:
+
+Flame-resistant coverall to the site standard.
+Safety helmet with chin strap.
+Safety footwear with metatarsal protection.
+Impact-rated eye protection.
+Hearing protection where the noise level exceeds 85 dBA.
+
+Additional protection is required for specific tasks. Chemical splash
+goggles and a face shield are worn for any work opening a line that has
+contained caustic or acid. Breathing apparatus is required for entry to any
+space with a measured oxygen content below 19.5 percent.
+
+1.5 Hydrogen sulphide
+
+Personal H2S monitors are worn in all sour service areas. The monitor alarms
+at 5 ppm and evacuation is immediate at 10 ppm. A monitor that has alarmed
+is not silenced and re-entered; the area is cleared and the reading reported
+to the shift supervisor.
+
+---PAGE---
+
+2.0 PERMIT TO WORK
+
+2.1 When a permit is required
+
+A permit is required for any work involving breaking containment, hot work,
+work at height above two metres, entry to a confined space, excavation, or
+isolation of a protective system.
+
+2.2 Validity
+
+A permit is valid for one shift only. Work continuing beyond a shift
+requires the permit to be revalidated by the incoming supervisor, who
+re-verifies the isolations personally.
+
+2.3 CONFINED SPACE ENTRY
+
+Entry permit EP-series applies to all vessel and confined space entry.
+Atmospheric testing for oxygen, lower explosive limit and hydrogen sulphide
+is carried out before entry and repeated every hour while the space is
+occupied.
+
+Acceptance values for entry are oxygen between 19.5 and 23.5 percent,
+hydrocarbon below 5 percent of the lower explosive limit, and hydrogen
+sulphide below 5 ppm.
+
+A standby person remains at the entry point for the whole duration of the
+entry and maintains continuous communication with those inside. The standby
+person does not enter the space under any circumstances, including to
+attempt a rescue.
+
+---PAGE---
+
+3.0 LOCK-OUT TAG-OUT
+
+3.1 Principle
+
+Energy sources are isolated, locked and tagged before work begins. Energy
+sources include electrical supply, stored pressure, stored mechanical energy
+in springs and raised loads, and thermal energy.
+
+3.2 Personal locks
+
+Each person working on the equipment applies their own lock. A lock is
+removed only by the person who applied it. Where that person is unavailable,
+removal requires the written authorisation of the area manager and a
+physical verification that nobody remains at the equipment.
+
+3.3 Verification
+
+Isolation is verified by attempting to start the equipment from its normal
+control point after the isolation is applied. An isolation that has not been
+verified by attempted start is not an isolation.
+
+4.0 EMERGENCY RESPONSE
+
+On hearing the site alarm, personnel proceed to the nearest designated
+assembly point upwind of the release. Vehicles are left in place with the
+keys in them. Roll call is taken by the area warden and reported to the
+incident controller.
+
+END OF DOCUMENT HSE-GEN-0014 REVISION 11

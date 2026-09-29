@@ -1,0 +1,101 @@
+# Render blueprint - https://render.com/docs/blueprint-spec
+#
+# One web service running the container from ./Dockerfile. The frontend is
+# built into that image and served by the API process, so there is no second
+# static site to deploy and no cross-origin request to allow.
+#
+# To use: in Render choose
+#   New > Blueprint > pick this repository > branch `main`
+#
+# Render reads this file, creates the service, and asks for the values marked
+# `sync: false` below. Those are the secrets - they are entered in Render and
+# never committed here.
+
+services:
+  - type: web
+    name: synq-workbench
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: main
+
+    # Free works. See the disk note at the bottom for what you give up.
+    plan: free
+    region: singapore
+
+    # Render calls this before routing traffic, and again periodically. It is
+    # the application's own health endpoint, so Render's idea of healthy and
+    # the app's cannot drift apart.
+    healthCheckPath: /api/health
+
+    envVars:
+      # --- set in Render, never here -----------------------------------
+      # `sync: false` means Render prompts for the value and stores it in
+      # its own secret store rather than reading it from this file.
+
+      # Required. The seed refuses to run without it outside development,
+      # so the container will not start until this is set - which is the
+      # intent: the built-in default is published in this repository and the
+      # seeded owner account carries full clearance.
+      - key: DEMO_PASSWORD
+        sync: false
+
+      - key: GROQ_API_KEY
+        sync: false
+
+      # Optional - only if you are routing vision or reasoning to Gemini.
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # --- model routing ------------------------------------------------
+      # Safe to keep in the file: these name models, not credentials.
+      - key: MODEL_PROVIDER
+        value: groq
+      # Gemma via Gemini rather than Qwen via Groq.
+      #
+      # Both are open-weight, so the claim is unchanged - this is about
+      # capacity. Groq's free tier is 8000 tokens/minute for the whole
+      # account, and a document question carries retrieved passages, so a
+      # couple of turns exhausted it and the next question failed in front
+      # of whoever was watching. Chat is the highest-volume role, so moving
+      # it is what buys the most headroom.
+      - key: MODEL_NAME
+        value: gemini:models/gemma-4-31b-it
+      - key: MODEL_FAST
+        value: openai/gpt-oss-20b
+      - key: MODEL_VISION
+        value: gemini:models/gemma-4-31b-it
+      - key: MODEL_REASONING
+        value: gemini:models/gemma-4-31b-it
+      - key: GEMINI_MODEL
+        value: models/gemma-4-31b-it
+
+      # --- runtime ------------------------------------------------------
+      # APP_ENV and DEBUG are already set by the Dockerfile; repeated here
+      # so the deployed configuration is readable in one place.
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+
+      # Empty means the SQLite fallback under /data. Point it at a Render
+      # PostgreSQL instance for something longer-lived.
+      - key: DATABASE_URL
+        value: ""
+
+    # --- persistence ------------------------------------------------------
+    # Render's free plan does not support disks, so this is commented out.
+    #
+    # Without a disk, /data lives in the container filesystem and is reset on
+    # every deploy and every restart. For this app that is less bad than it
+    # sounds: the seed runs on boot and rebuilds the entire demo corpus, so
+    # the service always comes back complete. What is lost is anything
+    # uploaded through the running site.
+    #
+    # For a demo where the seeded corpus *is* the demo, free is fine. Move to
+    # a paid instance and uncomment this the moment uploads need to survive.
+    #
+    # disk:
+    #   name: workbench-data
+    #   mountPath: /data
+    #   sizeGB: 1
