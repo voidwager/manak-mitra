@@ -131,8 +131,8 @@ export const AgentsPage = () => {
                       onClick={() => toggleAgent(agent)}
                       title={
                         agent.status !== 'Retired'
-                          ? 'On. SI-1 can engage this specialist.'
-                          : 'Off. SI-1 will not engage this specialist.'
+                          ? 'On. Manak Mitra can engage this specialist.'
+                          : 'Off. Manak Mitra will not engage this specialist.'
                       }
                     >
                       <span className="agent-switch-knob" />

@@ -97,8 +97,10 @@ const VISIBILITY_HINT = {
   personal:
     'Private to you. Nobody else can open or search this - administrators included.',
   restricted: 'Restricted. Only owner clearance can open or search this.',
+  public:
+    'Public BIS source. Anyone can ask about it, visitors included.',
   shared:
-    'Shared. Everyone assigned to this folder can retrieve its contents in chat.',
+    'Staff desk. Only officers assigned to this desk can retrieve its contents in chat.',
   chat:
     'Attached to one chat. Searchable in that conversation only - not in your knowledge base, not in your other chats.',
 };
@@ -130,6 +132,7 @@ export const DocumentsPage = () => {
     openDocPreview,
     openDocSettings,
     currentUser,
+    isGuest: isVisitor,
     health,
   } = useApp();
   const [filterType, setFilterType] = useState('ALL');
@@ -204,7 +207,9 @@ export const DocumentsPage = () => {
    */
   const sections = React.useMemo(() => {
     const priv = { personal: [], chat: [], restricted: [] };
-    const shared = new Map();
+    // Public BIS sources and staff desks are both folders of shared
+    // documents, but with opposite audiences - the server says which.
+    const folders = { public: new Map(), shared: new Map() };
 
     for (const doc of filteredDocs) {
       // A chat file is a personal file with a conversation attached, so the
@@ -214,9 +219,10 @@ export const DocumentsPage = () => {
       else if (doc.visibility === 'personal') priv.personal.push(doc);
       else if (doc.visibility === 'restricted') priv.restricted.push(doc);
       else {
+        const bucket = doc.visibility === 'public' ? folders.public : folders.shared;
         const key = doc.folder || 'Global';
-        if (!shared.has(key)) shared.set(key, []);
-        shared.get(key).push(doc);
+        if (!bucket.has(key)) bucket.set(key, []);
+        bucket.get(key).push(doc);
       }
     }
 
@@ -224,23 +230,25 @@ export const DocumentsPage = () => {
       (g) => priv[g.key].length > 0,
     ).map((g) => ({ id: `private-${g.key}`, name: g.name, kind: g.key, docs: priv[g.key] }));
 
-    const publicGroups = [...shared.keys()]
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({
-        id: `public-${name}`,
-        name,
-        kind: 'shared',
-        docs: shared.get(name),
-        // Folder names may be paths. Splitting on "/" is all the nesting
-        // there is - folders are free-text strings, not rows, so a real
-        // hierarchy would be a schema change rather than a display one.
-        depth: name.split('/').length - 1,
-        leaf: name.split('/').pop(),
-      }));
+    const folderGroups = (kind) =>
+      [...folders[kind].keys()]
+        .sort((a, b) => a.localeCompare(b))
+        .map((name) => ({
+          id: `${kind}-${name}`,
+          name,
+          kind,
+          docs: folders[kind].get(name),
+          // Folder names may be paths. Splitting on "/" is all the nesting
+          // there is - folders are free-text strings, not rows, so a real
+          // hierarchy would be a schema change rather than a display one.
+          depth: name.split('/').length - 1,
+          leaf: name.split('/').pop(),
+        }));
 
     return [
       { id: 'private', label: 'Private', groups: privateGroups },
-      { id: 'public', label: 'Public', groups: publicGroups },
+      { id: 'public', label: 'Public BIS sources', groups: folderGroups('public') },
+      { id: 'desks', label: 'Staff desks', groups: folderGroups('shared') },
     ].filter((section) => section.groups.length > 0);
   }, [filteredDocs]);
 
@@ -335,16 +343,20 @@ export const DocumentsPage = () => {
       <div className="page-header">
         <div>
           <div className="title-row">
-            <h1 className="page-title">Knowledge Base & RAG Scope</h1>
+            <h1 className="page-title">{isVisitor ? 'BIS Sources' : 'Knowledge Base'}</h1>
             <span className={`rbac-scope-badge ${currentUser.accessLevel === 'OWNER' ? 'owner' : 'employee'}`}>
               {currentUser.accessLevel === 'OWNER' ? <ShieldCheck size={14} /> : <FolderLock size={14} />}
               <span>{currentUser.scopeLabel}</span>
             </span>
           </div>
           <p className="page-subtitle">
-            {currentUser.accessLevel === 'OWNER' 
-              ? 'Owner clearance: every shared folder and the restricted archive. Personal uploads stay private to their owner.' 
-              : `Employee Clearance (${currentUser.name}): Restricted to assigned unit folders (${currentUser.assignedFolders.join(', ')}).`}
+            {currentUser.accessLevel === 'OWNER'
+              ? 'Administrator: every public source, every desk and the internal folder. Personal uploads stay private to their owner.'
+              : isVisitor
+                ? 'The published BIS material every answer is built from. Each file names the page it was captured from. Anything you upload stays private to you.'
+                : `${currentUser.role}: every public source, plus ${
+                    currentUser.assignedFolders.filter((f) => f !== 'Personal Uploads').join(', ') || 'no desk folders'
+                  }.`}
           </p>
         </div>
         <button 
@@ -352,7 +364,7 @@ export const DocumentsPage = () => {
           onClick={() => fileInputRef.current?.click()}
         >
           <Upload size={16} />
-          <span>Upload Document</span>
+          <span>{isVisitor ? 'Upload a private file' : 'Upload Document'}</span>
         </button>
       </div>
 

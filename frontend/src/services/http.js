@@ -29,7 +29,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
  * token is revocable server-side and the app renders no untrusted HTML
  * (see components/chat/MessageContent.jsx).
  */
-const TOKEN_KEY = 'synq_session_token';
+const TOKEN_KEY = 'manak_session_token';
 
 let activeToken = null;
 
@@ -149,7 +149,7 @@ export async function request(path, options = {}) {
   } catch (cause) {
     // Network-level failure: server down, DNS, CORS rejection.
     throw new ApiError(
-      'Cannot reach the workbench backend. Is the API running on ' +
+      'Cannot reach the Manak Mitra server. Is the API running on ' +
         `${API_BASE_URL}?`,
       { status: 0, url, body: String(cause) },
     );

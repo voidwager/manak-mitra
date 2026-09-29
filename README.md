@@ -1,11 +1,39 @@
-# SYNQ Workbench
+# Manak Mitra
 
-**SIH 2026 · Problem Statement SIH26117 · Mangalore Refinery and Petrochemicals Limited**
+**SIH 2026 · Problem Statement SIH26107 · Ministry of Consumer Affairs, Food & Public Distribution (Department of Consumer Affairs) · Theme: Smart Automation**
 
-A modular AI workbench for confidential industrial workflows, designed so
-that open-weight models, retrieval, agents, multimodal processing and
-enterprise tooling can eventually run entirely inside an organisation's own
-infrastructure.
+*AI-powered Intelligent Assistant for Indian Standards and BIS Services for
+Industries and Consumers.*
+
+A public helpdesk that answers questions about Indian Standards and the
+services of the Bureau of Indian Standards (BIS) in plain language, in the
+user's own language, with every answer cited to the BIS document it came
+from. Anyone can use it without an account; BIS staff sign in to manage the
+knowledge base.
+
+*Manak* is the word BIS itself uses for a standard (Manakonline, Manak
+Bhawan); *Mitra* is a friend.
+
+---
+
+## What it does - mapped to the problem statement
+
+| The problem statement asks it to... | How Manak Mitra does it |
+|---|---|
+| Answer questions related to Indian Standards | Retrieval over 19 public BIS documents (schemes, product lists, the BIS Act, standards basics), answers cited as `[1]`, `[2]` with the passage attached |
+| Recommend applicable standards from a product description | `find_standard` reads BIS's published product lists (Scheme-I, Scheme-X, CRS - 861 product rows) as tables and returns the matching rows: IS number, Quality Control Order, scheme. It says when nothing matches rather than guessing |
+| Guide on certification schemes, explain the process | The Certification Guide specialist, scoped to scheme documents: Scheme-I (ISI mark), CRS (R-number), FMCS, ECO mark, the Conformity Assessment Regulations |
+| Answer consumer queries | Consumer complaints, BIS CARE, misuse of the ISI mark, rights under the BIS Act |
+| Guide on hallmarking | HUID verification, caratages, mandatory districts by phase, testing your own jewellery, compensation for a purity shortfall |
+| Suggest testing laboratories | The Lab Locator specialist over BIS's own labs and the recognised-lab lists (Group-1 and Group-2, by state) |
+| Support multilingual interaction | Replies in the language and script the user wrote in. A question in Hindi, Tamil, Bengali or any non-Latin script is translated into English search terms for retrieval (the corpus is English), and the English query is shown in the activity trace |
+| Source-backed, authorised sources | Every file in `data/bis/source/` is public BIS or PIB material with its source URL and retrieval date in its header - see [`data/bis/source/MANIFEST.md`](data/bis/source/MANIFEST.md). A citation can only name a passage that was actually retrieved |
+
+**Built on SYNQ.** This is the same team's SIH26117 prototype (an
+on-premise agentic AI workbench), remodelled: the retrieval, citation,
+agent, tool and security machinery is unchanged in principle; the working
+model changed from a private plant tool to a public service. What changed and
+why is in [Remodel notes](#remodel-notes-industry-workbench-to-public-helpdesk).
 
 ---
 
@@ -40,6 +68,12 @@ of what exists; the running application reports the same thing at
 | Multi-step agentic loop (plan, act, observe) | Working *(bounded by steps, calls and time)* |
 | Authentication (hashed passwords, revocable sessions) | Working |
 | Audit trail, readable and filterable | Working |
+| Public mode: anonymous visitors, one private session each | Working |
+| BIS knowledge base (19 public documents, cited) | Working |
+| Product description to IS number (`find_standard`) | Working *(over the three published compulsory-certification lists)* |
+| Cross-language search (Hindi and other scripts) | Working *(needs a provider configured; falls back to searching as written)* |
+| Replies in the user's language | Working *(as good as the configured model's multilingual ability)* |
+| Voice input | Browser speech recognition, where the browser supports it |
 
 Two things worth stating plainly:
 
@@ -280,7 +314,7 @@ Set `POSTGRES_PASSWORD` in `.env` first (the compose file has no default on
 purpose), then point the backend at it:
 
 ```
-DATABASE_URL=postgresql+psycopg://synq:<your-password>@localhost:5432/synq_workbench
+DATABASE_URL=postgresql+psycopg://manak:<your-password>@localhost:5432/manak_mitra
 ```
 
 Then run `python scripts/seed_db.py` again.
@@ -288,7 +322,7 @@ Then run `python scripts/seed_db.py` again.
 ### SQLite development fallback
 
 If `DATABASE_URL` is empty, the backend falls back to a SQLite file at
-`data/synq_workbench.db`. This exists so a new team member can run the
+`data/manak_mitra.db`. This exists so a new team member can run the
 project before installing PostgreSQL. It is **not** the deployment target,
 and anything relying on PostgreSQL-specific behaviour must be tested
 against PostgreSQL.
@@ -327,7 +361,7 @@ MODEL_PROVIDER=local   # on-premise runtime. The end goal
 | | Why it decided the choice |
 |---|---|
 | Apache 2.0 licence | Survives a PSU procurement review; a custom licence invites questions |
-| Size ladder (~0.5B - 72B+) | 7B on a laptop for the offline demo, 72B on plant hardware, *same family* - so prompts tuned on hosted inference behave the same locally |
+| Size ladder (~0.5B - 72B+) | 7B on a laptop for the offline demo, 72B on server hardware, *same family* - so prompts tuned on hosted inference behave the same locally |
 | Vision variant in-family | The problem statement says *multimodal*; that becomes a model-id change, not a re-architecture |
 | Strong tool calling | Needed once the tool router lands |
 
@@ -341,7 +375,7 @@ Planned deployments:
 ```
 Prototype     Groq          Qwen, largest available
 Offline demo  Ollama        Qwen ~7B on a laptop (wifi off, still works)
-Target        vLLM          Qwen 72B on plant hardware
+Target        vLLM          Qwen 72B on server hardware
 ```
 
 ### Prototype (external)
@@ -401,14 +435,14 @@ Retrieval has two independent halves, and only one of them needs a model.
 **Lexical (BM25) is always on.** Pure Python over the indexed passages - no
 model, no GPU, no second service, no network. Upload a document and it is
 searchable immediately, on a laptop, offline. This is not a placeholder for
-the "real" retrieval: industrial queries are full of exact tokens
-(`P-204`, `CDU-II`, `API 610`, `2.5 mm/s`) and embeddings are notoriously
+the "real" retrieval: BIS questions are full of exact tokens
+(`IS 1293`, `IS/IEC 60947`, `HUID`, `R-41000000`) and embeddings are notoriously
 weak on exactly those, so BM25 is the half that gets tag numbers right.
 
 **Semantic search is additive.** Configure an embedding endpoint and vectors
 are stored alongside the text, then fused with the lexical ranking. It fixes
-the case BM25 misses - paraphrase, "how do I stop the pump safely" against
-text that says "isolation procedure".
+the case BM25 misses - paraphrase, "can I check if my gold is real" against
+text that says "verify HUID".
 
 ```
 EMBEDDING_PROVIDER=local
@@ -500,7 +534,7 @@ its every turn.
 
 Chunks and vectors live in the `document_chunks` table, and similarity is
 brute-force cosine in Python. That is a deliberate trade: no extra service
-to install, secure and back up on plant hardware, and one place where access
+to install, secure and back up on the server, and one place where access
 scoping lives. Cost is linear in corpus size, so it stops being appropriate
 somewhere in the hundreds of thousands of chunks - `app/rag/store.py` is the
 seam Qdrant or `pgvector` slots into, and whatever replaces it must reproduce
@@ -515,7 +549,7 @@ the permission filter rather than bolt one on afterwards.
 | `APP_ENV` | `development` | Environment label |
 | `DEBUG` | `true` | Verbose logging |
 | `DATABASE_URL` | *(empty)* | PostgreSQL connection string. Empty = SQLite fallback |
-| `SQLITE_FALLBACK_PATH` | `data/synq_workbench.db` | Development database file |
+| `SQLITE_FALLBACK_PATH` | `data/manak_mitra.db` | Development database file |
 | `SQL_ECHO` | `false` | Log every SQL statement |
 | `UPLOAD_DIR` | `data/documents` | Where uploaded files are written |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Allowed frontend origins |
@@ -783,7 +817,7 @@ raised later without invalidating existing passwords, and a correct password
 stored under weaker parameters is transparently upgraded on sign-in.
 
 **Sessions are rows, not JWTs.** A JWT cannot be withdrawn before it expires
-without a blocklist, which is a session table wearing a disguise. In a plant
+without a blocklist, which is a session table wearing a disguise. At BIS
 where access has to end the moment someone leaves, revocable beats
 stateless - `POST /sessions/{id}/revoke` is the control that makes "someone
 left" actionable. Only the token's hash is stored, so a leaked database
@@ -791,7 +825,7 @@ yields no live sessions for the same reason it yields no passwords.
 
 **A failed sign-in does not say why.** "No such account" and "wrong
 password" are different facts, and telling them apart lets anyone enumerate
-who has an account - on a plant system, a staff list. Both return the same
+who has an account - on a staff system, a staff list. Both return the same
 status and the same words, and the password is verified even when the
 account does not exist so the two paths take comparable time.
 
@@ -814,7 +848,7 @@ DEMO_PASSWORD must be set when APP_ENV is not 'development'.
 
 That is deliberate rather than merely tidy. The seeded owner account carries
 full clearance, so a deployment seeded with a password printed in this
-repository would hand plant-administrator access - the restricted archive
+repository would hand administrator access - the internal folder
 included - to anyone who found the URL. A deployment that refuses to seed is
 obvious; one that seeds a published password is not.
 
@@ -929,3 +963,67 @@ rots quietly, and finding out in front of an audience is the wrong time.
    embedding model, vector database or inference vendor.
 7. **Build vertically.** Finish complete slices — UI through API through
    database — before starting new features.
+
+---
+
+## Remodel notes: industry workbench to public helpdesk
+
+SYNQ answered confidential documents for people inside one plant. BIS
+answers public rules for anyone in the country. Same machinery, opposite
+working model - so what changed is mostly *who may do what*, not how
+retrieval works.
+
+| | SYNQ (SIH26117) | Manak Mitra (SIH26107) |
+|---|---|---|
+| Users | Plant staff, all signed in | Anyone; staff sign in only to administer |
+| Corpus | Fictional refinery SOPs | 19 real public BIS documents, source URL and date on each |
+| Folders | Unit folders, scoped per user | Six public folders everyone reads; desk folders scoped per officer; `BIS Internal` owner-only |
+| Language | English | Replies in the user's language; non-Latin questions searched through an English rewrite |
+| Key question | "What does our SOP say?" | "Which standard applies to my product?" - answered by a dedicated tool over BIS's product lists |
+
+### What was added
+
+- **Public mode** (`PUBLIC_MODE`, default on). `POST /api/auth/guest` mints a
+  throwaway visitor (`AccessLevel.PUBLIC`) with one session. One account per
+  visitor, because conversations and uploads are keyed by user - a shared
+  guest account would show everyone everyone's chats. Visitor rows have no
+  password hash, so they can never be signed into by password.
+- **Visitor limits, enforced server-side**: read the public folders and
+  their own uploads; cannot publish into a public folder, create an agent,
+  or switch a tool. The UI hides those controls, but the API is what refuses.
+- **`find_standard`** (`app/tools/builtin/standards.py`): parses every table
+  with an IS-number column in the *Standards & QCOs* folder and matches a
+  product description by its head noun ("PVC **pipes** for drinking water"),
+  IDF-weighted, with a small synonym map for how people say things versus
+  how BIS lists them (bulb/lamp, TV/television). Every match reports which
+  of the user's words it does *not* cover, so a near match is never
+  presented as an exact one.
+- **Cross-language search** (`app/services/language.py`): a question mostly
+  in a non-Latin script is rewritten into English search terms by the fast
+  model, and searched together with the original.
+- **Retrieval tuning for this corpus**: BM25 now scores a passage together
+  with its document title and section heading (the passage the model cites
+  is unchanged), and folds plurals on plain words ("laboratories" matches
+  "labs"). Identifiers are never stemmed.
+- **Real voice input** in ten Indian languages through the browser's speech
+  recognition, hidden where the browser has none.
+
+### Found and fixed along the way
+
+- **Any signed-in user could switch a tool off for everyone.**
+  `POST /tools/{id}/toggle` had no permission check. On a public site that
+  would have let any visitor disable the service. Now administrator-only.
+- **The microphone button was simulated** - it waited two seconds and typed
+  a canned sentence. Replaced with real recognition, per the rule that the UI
+  must not pretend.
+
+### Knowledge-base gaps
+
+From [`data/bis/source/MANIFEST.md`](data/bis/source/MANIFEST.md): marking-fee
+tables per IS number, the ISI application checklist and forms, per-lab
+testing scope and charges (only on the dynamic LIMS portal), lists of A&H
+centres and licensed jewellers, and the amended text of the Conformity
+Assessment Regulations were not captured from a static public source. The
+assistant says so when asked rather than filling the gap from memory. The
+next step is scheduled re-capture of these pages, and
+`EMBEDDING_MODEL=bge-m3` for multilingual semantic search.

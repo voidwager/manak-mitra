@@ -27,7 +27,7 @@ DEMO_PASSWORD must be set when APP_ENV is not 'development'.
 
 That is deliberate. The built-in default is printed in this repository and
 the seeded owner account carries full clearance, so a deployment seeded with
-it would hand plant-administrator access — the restricted archive included —
+it would hand administrator access — the restricted archive included —
 to anyone who found the URL. A container that refuses to start is a problem
 you notice; one that starts with a published password is not.
 
@@ -61,9 +61,9 @@ The addresses are seeded; the password is the one you set.
 
 | Email | Role | Sees |
 |---|---|---|
-| `testowner@refinery.example` | Owner | Everything shared, plus the restricted archive |
-| `testemployee@refinery.example` | Employee | CDU-II and their own uploads |
-| `testemployee2@refinery.example` | Employee | Safety and their own uploads |
+| `admin@bis-helpdesk.example` | Owner | Every public source and desk, plus the BIS Internal folder |
+| `certification@bis-helpdesk.example` | Employee | Public sources, the Certification Desk, their own uploads |
+| `hallmarking@bis-helpdesk.example` | Employee | Public sources, the Hallmarking Desk, their own uploads |
 
 The sign-in page fills the address when you click a persona and leaves the
 password blank, because outside development there is no password it could
@@ -94,7 +94,7 @@ SQLite on a volume is fine for a demo. For anything longer-lived:
 ```bash
 # in .env
 POSTGRES_PASSWORD=...
-DATABASE_URL=postgresql+psycopg://synq:...@postgres:5432/synq_workbench
+DATABASE_URL=postgresql+psycopg://manak:...@postgres:5432/manak_mitra
 
 docker compose -f docker-compose.deploy.yml --profile postgres up -d --build
 ```
@@ -122,8 +122,8 @@ entrypoint runs a single worker.
 4. **Apply.** First build takes roughly 5–10 minutes — it installs the
    Python dependencies and runs a full Vite build inside the image.
 
-You get `https://synq-workbench.onrender.com` (or whatever name you set).
-Sign in with `testowner@refinery.example` and the `DEMO_PASSWORD` you chose.
+You get `https://manak-mitra.onrender.com` (or whatever name you set).
+Visitors need no account. Staff sign in with `admin@bis-helpdesk.example` and the `DEMO_PASSWORD` you chose.
 
 ### Watch the first boot
 

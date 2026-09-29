@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { SynqWordmark } from './SynqWordmark';
+import { Wordmark } from './Wordmark';
 
 /**
  * The brand mark, in whichever form has been chosen.
@@ -41,7 +41,7 @@ export const BRAND_VARIANTS = {
     height: 37,
     // Two lines, because one would be half again as wide as the mark it
     // sits under. The break falls where the sentence does.
-    tagline: ['Synthetic Yield for', 'Neural Quantization'],
+    tagline: ['Indian Standards', 'Help Desk'],
     description: 'With the tagline underneath.'
   }
 };
@@ -59,10 +59,10 @@ export const DEFAULT_BRAND_VARIANT = 'lockup';
  * boundary, so the fill is explicit and the theme swap happens outside the
  * file.
  */
-const LOGO_SRC = '/synq-logo.svg';
+const LOGO_SRC = '/manak-mitra-logo.svg';
 
-const STORAGE_KEY = 'synq.brandVariant';
-const CHANGE_EVENT = 'synq:brand-variant';
+const STORAGE_KEY = 'manak.brandVariant';
+const CHANGE_EVENT = 'manak:brand-variant';
 
 const readStored = () => {
   try {
@@ -118,18 +118,18 @@ export const useBrandVariant = () => {
  * file is missing - a bad checkout, a build that dropped public/. A brand
  * that renders as a broken-image icon is worse than one drawn in code.
  */
-export const SynqBrand = ({ variant = DEFAULT_BRAND_VARIANT, className = '' }) => {
+export const BrandMark = ({ variant = DEFAULT_BRAND_VARIANT, className = '' }) => {
   const spec = BRAND_VARIANTS[variant] || BRAND_VARIANTS[DEFAULT_BRAND_VARIANT];
   const [failed, setFailed] = useState(false);
 
   return (
     <span className={'brand-mark ' + className}>
       {failed ? (
-        <SynqWordmark height={spec.height} className="brand-wordmark" />
+        <Wordmark height={spec.height} className="brand-wordmark" />
       ) : (
         <img
           src={LOGO_SRC}
-          alt="SYNQ"
+          alt="Manak Mitra"
           className="brand-logo"
           style={{ height: spec.height + 'px' }}
           onError={() => setFailed(true)}
@@ -138,7 +138,7 @@ export const SynqBrand = ({ variant = DEFAULT_BRAND_VARIANT, className = '' }) =
 
       {spec.tagline && (
         /*
-         * aria-hidden because the image above is already labelled "SYNQ"
+         * aria-hidden because the image above is already labelled "Manak Mitra"
          * and the full name is on the <title> of the page. Read out, this
          * would be a second announcement of the same brand.
          */
@@ -161,7 +161,7 @@ export const SynqBrand = ({ variant = DEFAULT_BRAND_VARIANT, className = '' }) =
 
         .brand-logo {
           /* Height is set per variant, inline, and width follows from the
-             aspect ratio: the mark is 4.32:1, so sizing on width would
+             aspect ratio: the mark is 4.3:1, so sizing on width would
              either crush the letters or push the header out of a 260px
              panel. */
           width: auto;
@@ -215,4 +215,4 @@ export const SynqBrand = ({ variant = DEFAULT_BRAND_VARIANT, className = '' }) =
   );
 };
 
-export default SynqBrand;
+export default BrandMark;

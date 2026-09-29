@@ -64,7 +64,7 @@ export const SearchModal = ({ onClose }) => {
               <div className="quick-tags">
                 <button onClick={() => setQuery('Pump')}>"Pump"</button>
                 <button onClick={() => setQuery('Inspection')}>"Inspection"</button>
-                <button onClick={() => setQuery('SOP')}>"SOP"</button>
+                <button onClick={() => setQuery('HUID')}>"HUID"</button>
                 <button onClick={() => setQuery('Compressor')}>"Compressor"</button>
               </div>
             </div>

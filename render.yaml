@@ -13,7 +13,7 @@
 
 services:
   - type: web
-    name: synq-workbench
+    name: manak-mitra
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .

@@ -5,6 +5,21 @@ import { MessageContent } from '../components/chat/MessageContent';
 import { isReportable } from '../utils/reports';
 import { PreparingState } from '../components/chat/PreparingState';
 import { formatClock } from '../utils/time';
+import { useSpeechInput, VOICE_LANGUAGES } from '../utils/speech';
+
+/**
+ * One per thing the helpdesk is for, each answerable from the seeded BIS
+ * sources - so clicking any of them on a fresh install produces a cited
+ * answer, not "the documents don't cover this".
+ */
+const STARTER_QUESTIONS = [
+  'Which Indian Standard applies to a pressure cooker?',
+  'Do I need BIS registration to sell power banks?',
+  'सोने के गहने पर HUID कैसे जांचें?',
+  'How do I apply for an ISI mark licence?',
+  'Which BIS-recognised labs are in Maharashtra?',
+  'How do I complain about a fake ISI mark?',
+];
 import {
   Sparkles,
   Paperclip,
@@ -82,7 +97,6 @@ export const ChatWorkspace = () => {
   const [inputVal, setInputVal] = useState('');
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [activityOpenMap, setActivityOpenMap] = useState({});
-  const [isRecording, setIsRecording] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -169,17 +183,16 @@ export const ChatWorkspace = () => {
     }));
   };
 
+  // Real recognition, appended to whatever is already typed. The transcript
+  // lands in the box rather than being sent, so the user can correct it.
+  const speech = useSpeechInput((text) =>
+    setInputVal((current) => (current.trim() ? `${current.trim()} ${text}` : text)),
+  );
+  const isRecording = speech.listening;
+
   const handleMicToggle = () => {
-    if (isRecording) {
-      setIsRecording(false);
-    } else {
-      setIsRecording(true);
-      // Simulate audio transcription after 2.5s
-      setTimeout(() => {
-        setInputVal('Analyze this inspection report and identify any potential abnormalities.');
-        setIsRecording(false);
-      }, 2200);
-    }
+    if (speech.listening) speech.stop();
+    else speech.start();
   };
 
   const handleCopy = (id, text) => {
@@ -211,7 +224,26 @@ export const ChatWorkspace = () => {
       <div className="messages-scroll-area" ref={scrollAreaRef}>
         {messages.length === 0 ? (
           <div className="empty-chat-state animate-fade-in">
-            <h2>How can I help you today?</h2>
+            <h2>Ask about Indian Standards</h2>
+            <p className="empty-chat-sub">
+              Standards, certification, hallmarking, testing labs and
+              complaints - in English, हिन्दी or your own language. Every
+              answer cites the BIS document it came from.
+            </p>
+            {/* Filled in, not sent: a first-time visitor should see what a
+                good question looks like and still be free to change it. */}
+            <div className="starter-questions">
+              {STARTER_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  className="starter-question"
+                  onClick={() => setInputVal(q)}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((msg, index) => {
@@ -483,7 +515,12 @@ export const ChatWorkspace = () => {
           {isRecording && (
             <div className="recording-banner animate-fade-in">
               <span className="rec-dot animate-pulse-dot" />
-              <span>Listening to industrial speech query...</span>
+              <span>Listening...</span>
+            </div>
+          )}
+          {speech.error && !isRecording && (
+            <div className="recording-banner animate-fade-in" role="status">
+              <span>{speech.error}</span>
             </div>
           )}
 
@@ -515,7 +552,7 @@ export const ChatWorkspace = () => {
                   className="model-selector-btn"
                   onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
                 >
-                  <span>{activeAgent?.name ?? 'SI-1'}</span>
+                  <span>{activeAgent?.name ?? 'Manak Mitra'}</span>
                   <ChevronDown size={14} />
                 </button>
 
@@ -547,14 +584,35 @@ export const ChatWorkspace = () => {
             </div>
 
             <div className="toolbar-right">
-              {/* Microphone Voice Button */}
-              <button 
-                className={`toolbar-btn ${isRecording ? 'recording-active' : ''}`}
-                onClick={handleMicToggle}
-                title={isRecording ? 'Stop Recording' : 'Voice Query'}
-              >
-                {isRecording ? <MicOff size={18} className="text-danger" /> : <Mic size={18} />}
-              </button>
+              {/* Voice input: only where the browser can actually do it. */}
+              {speech.supported && (
+                <>
+                  <select
+                    className="voice-language"
+                    value={speech.language}
+                    onChange={(e) => speech.setLanguage(e.target.value)}
+                    aria-label="Voice input language"
+                    title="Language you will speak in"
+                    disabled={isRecording}
+                  >
+                    {VOICE_LANGUAGES.map((l) => (
+                      <option key={l.code} value={l.code}>{l.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    className={`toolbar-btn ${isRecording ? 'recording-active' : ''}`}
+                    onClick={handleMicToggle}
+                    title={
+                      isRecording
+                        ? 'Stop listening'
+                        : "Speak your question (uses your browser's speech recognition)"
+                    }
+                    aria-pressed={isRecording}
+                  >
+                    {isRecording ? <MicOff size={18} className="text-danger" /> : <Mic size={18} />}
+                  </button>
+                </>
+              )}
 
               {/* Send Button */}
               <button 
@@ -611,6 +669,41 @@ export const ChatWorkspace = () => {
           font-size: 1.75rem;
           font-weight: 600;
           letter-spacing: -0.015em;
+          color: var(--text-primary);
+        }
+
+        .empty-chat-sub {
+          max-width: 520px;
+          margin-top: 10px;
+          font-size: 0.9rem;
+          line-height: 1.55;
+          color: var(--text-secondary);
+        }
+
+        .starter-questions {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 8px;
+          max-width: 640px;
+          margin-top: 22px;
+        }
+
+        .starter-question {
+          padding: 8px 14px;
+          border-radius: 999px;
+          border: 1px solid var(--border-subtle);
+          background: var(--bg-surface, transparent);
+          color: var(--text-secondary);
+          font-size: 0.82rem;
+          font-family: inherit;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .starter-question:hover {
+          border-color: var(--accent-primary);
           color: var(--text-primary);
         }
 
@@ -1328,6 +1421,25 @@ export const ChatWorkspace = () => {
         }
 
         .toolbar-btn:hover {
+          background: var(--bg-hover);
+          color: var(--text-primary);
+        }
+
+        /* Sized to sit in the toolbar like a button, not a form field. */
+        .voice-language {
+          height: 32px;
+          max-width: 96px;
+          padding: 0 6px;
+          border-radius: 8px;
+          border: 1px solid var(--border-subtle);
+          background: transparent;
+          color: var(--text-secondary);
+          font-size: 0.75rem;
+          font-family: inherit;
+          cursor: pointer;
+        }
+
+        .voice-language:hover:not(:disabled) {
           background: var(--bg-hover);
           color: var(--text-primary);
         }

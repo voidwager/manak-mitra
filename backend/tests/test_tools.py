@@ -26,15 +26,15 @@ from app.tools.base import ToolArgumentError
 from app.tools.builtin.calculator import CalculatorTool, evaluate
 from tests.conftest import StubProvider
 
-MAINTENANCE_CSV = (
-    b"Date,TagID,Equipment,Action,Technician,DowntimeHours\n"
-    b"2026-08-27,P-204,Centrifugal Pump,Seal Flush,S. Jain,4.5\n"
-    b"2026-08-14,C-101,Compressor,Valve Replacement,A. Roy,12.25\n"
-    b"2026-07-02,P-204,Centrifugal Pump,Bearing Change,A. Roy,8\n"
+COMPLAINTS_CSV = (
+    b"Date,Ref,Category,Action,Officer,DaysOpen\n"
+    b"2026-08-27,HM-204,Hallmark,Re-test,S. Jain,4.5\n"
+    b"2026-08-14,IS-101,ISI Mark,Licence Check,A. Roy,12.25\n"
+    b"2026-07-02,HM-204,Hallmark,Refund Review,A. Roy,8\n"
 )
 
 
-def _context(db_session, user_id="user-sanyam", agent_id="maint-intel"):
+def _context(db_session, user_id="user-sanyam", agent_id="certification-guide"):
     from app.database.models import Agent, User
 
     return ToolContext(
@@ -109,14 +109,14 @@ def test_calculator_tool_returns_a_readable_result(db_session):
 def test_an_agent_is_only_offered_the_tools_it_was_granted(db_session):
     from app.database.models import Agent
 
-    maintenance = registry.available_for(db_session, db_session.get(Agent, "maint-intel"))
-    sop = registry.available_for(db_session, db_session.get(Agent, "sop-assistant"))
+    certification = registry.available_for(db_session, db_session.get(Agent, "certification-guide"))
+    labs = registry.available_for(db_session, db_session.get(Agent, "lab-locator"))
 
-    assert "calculator" in {t.name for t in maintenance}
-    # SOP Assistant is granted the document-reading tools only - searching
+    assert "calculator" in {t.name for t in certification}
+    # Lab Locator is granted the document-reading tools only - searching
     # inside documents, and reading one end to end. No calculator, no
     # analytics, no report generation.
-    assert {t.name for t in sop} == {
+    assert {t.name for t in labs} == {
         "document_search",
         "knowledge_retrieval",
         "read_document",
@@ -131,13 +131,13 @@ def test_an_agentless_turn_is_offered_no_tools(db_session):
 def test_a_globally_disabled_tool_is_not_offered(client, owner_headers, db_session):
     from app.database.models import Agent
 
-    before = {t.name for t in registry.available_for(db_session, db_session.get(Agent, "maint-intel"))}
+    before = {t.name for t in registry.available_for(db_session, db_session.get(Agent, "certification-guide"))}
     assert "calculator" in before
 
     client.post("/api/tools/calculator/toggle", headers=owner_headers)
     db_session.expire_all()
 
-    after = {t.name for t in registry.available_for(db_session, db_session.get(Agent, "maint-intel"))}
+    after = {t.name for t in registry.available_for(db_session, db_session.get(Agent, "certification-guide"))}
     assert "calculator" not in after
 
     # Put it back so later tests see the seeded state.
@@ -148,10 +148,10 @@ def test_calling_an_ungranted_tool_is_refused_not_executed(db_session):
     """A model asking for a tool it does not have is normal, not an error."""
     from app.database.models import Agent
 
-    permitted = registry.available_for(db_session, db_session.get(Agent, "sop-assistant"))
+    permitted = registry.available_for(db_session, db_session.get(Agent, "lab-locator"))
     call = registry.ToolCall(id="c1", name="calculator", arguments={"expression": "2+2"})
 
-    invocation = registry.execute(call, _context(db_session, agent_id="sop-assistant"), permitted)
+    invocation = registry.execute(call, _context(db_session, agent_id="lab-locator"), permitted)
 
     assert invocation.ok is False
     assert "not available to this agent" in invocation.result.content
@@ -162,7 +162,7 @@ def test_calling_an_ungranted_tool_is_refused_not_executed(db_session):
 def test_a_hallucinated_tool_name_is_refused_gracefully(db_session):
     from app.database.models import Agent
 
-    permitted = registry.available_for(db_session, db_session.get(Agent, "maint-intel"))
+    permitted = registry.available_for(db_session, db_session.get(Agent, "certification-guide"))
     call = registry.ToolCall(id="c1", name="delete_everything", arguments={})
 
     invocation = registry.execute(call, _context(db_session), permitted)
@@ -180,7 +180,7 @@ def test_retrieval_tools_inherit_the_callers_document_scope(
         files={
             "file": (
                 "restricted-tool-test.txt",
-                io.BytesIO(b"Turbine T-9001 trip setpoint is 3820 rpm."),
+                io.BytesIO(b"Licence L-9001 renewal fee is 3820 rupees."),
                 "text/plain",
             )
         },
@@ -198,9 +198,9 @@ def test_retrieval_tools_inherit_the_callers_document_scope(
     # this test is about. (An agent's folder scope narrows further; that is
     # covered in test_agents.py.)
     owner_result = tool.run(
-        _context(db_session, agent_id=None), query="T-9001 trip setpoint"
+        _context(db_session, agent_id=None), query="L-9001 renewal fee"
     )
-    assert "3820 rpm" in owner_result.content
+    assert "3820 rupees" in owner_result.content
     assert owner_result.citations
 
     # Ananya is not cleared for BIS Internal. The refusal echoes
@@ -211,7 +211,7 @@ def test_retrieval_tools_inherit_the_callers_document_scope(
     # nothing back.
     engineer_result = tool.run(
         _context(db_session, user_id="user-ananya", agent_id=None),
-        query="T-9001 trip setpoint",
+        query="L-9001 renewal fee",
     )
     assert "3820" not in engineer_result.content
     assert all(
@@ -288,7 +288,7 @@ def test_an_unbuilt_tool_is_never_reported_as_built(client, owner_headers):
 def test_a_failing_tool_returns_an_error_not_a_plausible_answer(db_session):
     from app.database.models import Agent
 
-    permitted = registry.available_for(db_session, db_session.get(Agent, "maint-intel"))
+    permitted = registry.available_for(db_session, db_session.get(Agent, "certification-guide"))
     call = registry.ToolCall(
         id="c1", name="calculator", arguments={"expression": "1 / 0"}
     )
@@ -318,7 +318,7 @@ def test_table_analysis_computes_over_indexed_rows(
     client.post(
         "/api/documents",
         headers=owner_headers,
-        files={"file": ("Tool Test History.csv", io.BytesIO(MAINTENANCE_CSV), "text/csv")},
+        files={"file": ("Tool Test History.csv", io.BytesIO(COMPLAINTS_CSV), "text/csv")},
     )
     db_session.expire_all()
 
@@ -331,7 +331,7 @@ def test_table_analysis_computes_over_indexed_rows(
     total = tool.run(
         context,
         operation="sum",
-        column="DowntimeHours",
+        column="DaysOpen",
         document="Tool Test History",
     )
     # 4.5 + 12.25 + 8 - computed, not estimated.
@@ -340,9 +340,9 @@ def test_table_analysis_computes_over_indexed_rows(
     filtered = tool.run(
         context,
         operation="count",
-        column="TagID",
-        where_column="TagID",
-        where_value="P-204",
+        column="Ref",
+        where_column="Ref",
+        where_value="HM-204",
         document="Tool Test History",
     )
     assert "2 row" in filtered.content
@@ -352,7 +352,7 @@ def test_analysing_a_missing_column_names_the_real_ones(client, owner_headers, d
     client.post(
         "/api/documents",
         headers=owner_headers,
-        files={"file": ("Column Test.csv", io.BytesIO(MAINTENANCE_CSV), "text/csv")},
+        files={"file": ("Column Test.csv", io.BytesIO(COMPLAINTS_CSV), "text/csv")},
     )
     db_session.expire_all()
 
@@ -364,7 +364,7 @@ def test_analysing_a_missing_column_names_the_real_ones(client, owner_headers, d
             column="NotAColumn",
             document="Column Test",
         )
-    assert "TagID" in str(excinfo.value)
+    assert "Ref" in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
@@ -415,18 +415,18 @@ def test_chat_runs_a_tool_and_answers_with_its_result(
 ):
     stub = stub_gateway(
         ToolCallingStub(
-            "calculator", '{"expression": "47.5 * 18.25"}', "The total is 866.875 m3."
+            "calculator", '{"expression": "47.5 * 18.25"}', "The total is 866.875 Rs."
         )
     )
 
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "47.5 m3/h for 18.25 hours?", "agentId": "maint-intel"},
+        json={"message": "47.5 Rs per test for 18.25 tests?", "agentId": "certification-guide"},
     ).json()
 
     assert stub.calls == 2, "expected a tool round then an answer"
-    assert body["assistantMessage"]["text"] == "The total is 866.875 m3."
+    assert body["assistantMessage"]["text"] == "The total is 866.875 Rs."
 
     labels = [s["label"] for s in body["assistantMessage"]["activityTrace"]]
     assert any("Tool: calculator" in label for label in labels)
@@ -475,7 +475,7 @@ def test_a_second_tool_round_is_refused_rather_than_looping(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "loop please", "agentId": "maint-intel"},
+        json={"message": "loop please", "agentId": "certification-guide"},
     ).json()
 
     # Bounded, and the last call explicitly forbids further tool use rather

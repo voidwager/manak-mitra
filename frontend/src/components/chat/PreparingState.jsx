@@ -25,7 +25,7 @@ import React from 'react';
  */
 
 /** Steps worth showing mid-flight. The trace carries bookkeeping too. */
-const INTERESTING = /^(SI-1:|Tool:|Knowledge base retrieval|Retrieved|Read ')/;
+const INTERESTING = /^(SI-1:|Manak Mitra:|Searched in English|Tool:|Knowledge base retrieval|Retrieved|Read ')/;
 
 export const PreparingState = ({ stage, steps }) => {
   const label = stage?.label || 'Getting your answer ready';

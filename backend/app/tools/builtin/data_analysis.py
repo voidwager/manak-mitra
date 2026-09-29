@@ -97,8 +97,8 @@ class DataAnalysisTool(Tool):
                 "document": {
                     "type": "string",
                     "description": (
-                        "Part of the table's file name, e.g. 'Maintenance "
-                        "History'. Omit to use the only table available."
+                        "Part of the table's file name, e.g. 'Complaint "
+                        "Register'. Omit to use the only table available."
                     ),
                 },
                 "operation": {

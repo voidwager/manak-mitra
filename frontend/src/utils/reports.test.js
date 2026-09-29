@@ -15,12 +15,12 @@ describe('isReportable', () => {
     // The length rule alone would throw this away, and it is exactly the
     // kind of answer a report should carry.
     expect(
-      isReportable(reply({ text: '2.5 mm/s RMS [1].', sources: [{ title: 'SOP.pdf' }] })),
+      isReportable(reply({ text: 'Rs 45 per article [1].', sources: [{ title: 'Hallmarking FAQ.md' }] })),
     ).toBe(true);
   });
 
   it('accepts the singular source field as well as the list', () => {
-    expect(isReportable(reply({ text: 'Short.', source: { title: 'SOP.pdf' } }))).toBe(true);
+    expect(isReportable(reply({ text: 'Short.', source: { title: 'Hallmarking FAQ.md' } }))).toBe(true);
   });
 
   it('offers a report for a long uncited analysis', () => {

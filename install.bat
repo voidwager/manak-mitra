@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM  SYNQ Workbench - one-time setup
+REM  Manak Mitra - one-time setup
 REM
 REM  Installs everything a fresh machine needs:
 REM    1. Python virtualenv + backend packages   (backend/requirements.txt)
@@ -18,7 +18,7 @@ set "ROOT=%CD%"
 set "PYTHON=%ROOT%\backend\.venv\Scripts\python.exe"
 
 echo.
-echo  SYNQ Workbench - setup
+echo  Manak Mitra - setup
 echo  =========================
 echo.
 

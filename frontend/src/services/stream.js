@@ -32,7 +32,7 @@ export async function streamEvents(path, body, handlers = {}, signal) {
   } catch (cause) {
     if (cause?.name === 'AbortError') throw cause;
     throw new ApiError(
-      `Cannot reach the workbench backend at ${API_BASE_URL}.`,
+      `Cannot reach the Manak Mitra server at ${API_BASE_URL}.`,
       { status: 0 },
     );
   }

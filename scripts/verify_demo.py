@@ -26,12 +26,14 @@ BACKEND = Path(__file__).resolve().parents[1] / "backend"
 sys.path.insert(0, str(BACKEND))
 
 from app.core.logging import configure_logging  # noqa: E402
+from app.core.security import AccessLevel  # noqa: E402
 from app.database.models import Agent, Document, Tool, User  # noqa: E402
 from app.database.session import SessionLocal  # noqa: E402
 from app.models import get_gateway  # noqa: E402
 from app.rag import retrieve  # noqa: E402
-from app.services.access import (
+from app.services.access import (  # noqa: E402
     PERSONAL_FOLDER,
+    PUBLIC_FOLDERS,
     publish_error,
     visible_documents_query,
 )
@@ -40,6 +42,10 @@ from app.tools import ToolContext, registry  # noqa: E402
 
 failures: list[str] = []
 checks = 0
+
+HUID_DOC = "Hallmarking for Consumers - HUID, Testing, Compensation.md"
+PUBLIC_IDS = [f"bis-{n:02d}" for n in range(1, 20)]
+STAFF_IDS = ["int-cert", "int-hallmark", "int-analytics"]
 
 
 def check(label: str, condition: bool, detail: str = "") -> None:
@@ -58,89 +64,152 @@ def search(db, user: User, query: str, agent: Agent | None = None):
     )
 
 
+def visible_ids(db, user: User) -> set[str]:
+    return {d.id for d in db.scalars(visible_documents_query(user))}
+
+
 def main() -> int:
     configure_logging()
 
     with SessionLocal() as db:
         owner = db.get(User, "user-sanyam")
-        engineer = db.get(User, "user-ananya")
-        safety = db.get(User, "user-dev")
+        certification = db.get(User, "user-ananya")
+        hallmarking = db.get(User, "user-dev")
 
         if owner is None:
             print("No seeded users. Run: python scripts/seed_db.py")
             return 1
 
+        # A visitor is a row like any other, so make one for the duration
+        # of the run. Everything below is rolled back at the end; nothing is
+        # left behind in the database.
+        guest = User(
+            id="verify-guest",
+            name="Visitor",
+            email="verify-guest@guest.invalid",
+            role="Public visitor",
+            initials="V",
+            access_level=AccessLevel.PUBLIC,
+            scope_label="Public BIS information",
+            assigned_folders=[],
+            avatar_gradient="",
+            password_hash=None,
+        )
+        db.add(guest)
+        db.flush()
+
         # --- Step 1: the corpus exists and is indexed --------------------
         print("\nStep 1 - the knowledge base is real")
-        seeded = [db.get(Document, f"doc-{n}") for n in range(1, 6)]
-        check("all five demo documents exist", all(d is not None for d in seeded))
+        seeded = [db.get(Document, i) for i in PUBLIC_IDS + STAFF_IDS]
+        check(
+            "all 19 public BIS documents and 3 staff samples exist",
+            all(d is not None for d in seeded),
+        )
         if any(d is None for d in seeded):
             print("\nRun: python scripts/seed_db.py")
             return 1
 
         check(
-            "all five are indexed with chunks",
+            "all are indexed with chunks",
             all(d.status == "Indexed" and d.chunk_count > 0 for d in seeded),
-            ", ".join(f"{d.name}={d.status}/{d.chunk_count}" for d in seeded),
+            ", ".join(
+                f"{d.id}={d.status}/{d.chunk_count}"
+                for d in seeded
+                if not (d.status == "Indexed" and d.chunk_count > 0)
+            ),
         )
-        check(
-            "each has bytes on disk",
-            all(d.has_stored_file for d in seeded),
-        )
+        check("each has bytes on disk", all(d.has_stored_file for d in seeded))
         check(
             "excerpts come from extracted text, not authored copy",
-            all("FICTIONAL" in d.excerpt or d.excerpt.strip() for d in seeded),
+            all(d.excerpt.strip() for d in seeded),
+        )
+        check(
+            "every public document sits in a public folder",
+            all(db.get(Document, i).folder in PUBLIC_FOLDERS for i in PUBLIC_IDS),
         )
 
-        # --- Step 2: a citation that resolves ----------------------------
-        print("\nStep 2 - an answer with a checkable citation")
-        result = search(db, owner, "acceptable vibration limit for a CDU-II pump")
-        check("the vibration question retrieves something", result.found)
+        # --- Step 2: a visitor gets a citation that resolves --------------
+        print("\nStep 2 - a visitor's answer with a checkable citation")
+        result = search(db, guest, "how can I verify a HUID on gold jewellery")
+        check("the HUID question retrieves something for a visitor", result.found)
         if result.found:
-            top = result.passages[0]
+            names = [p.document_name for p in result.passages]
             check(
-                "top hit is the pump SOP",
-                "Centrifugal Pump" in top.document_name,
-                f"got {top.document_name}",
+                "retrieval returns the consumer hallmarking page",
+                HUID_DOC in names,
+                f"got {names}",
             )
             check(
-                "the retrieved passage contains the actual limit",
-                any("2.5 mm/s" in p.text for p in result.passages),
-                "no passage mentions 2.5 mm/s RMS",
+                "the retrieved passages mention BIS CARE",
+                any("BIS CARE" in p.text for p in result.passages),
+                "no passage mentions BIS CARE",
             )
-            citation = top.as_citation()
-            check(
-                "the citation names a real page and section",
-                citation["pageNumber"] >= 1 and bool(citation["title"]),
+            top = next(
+                (p for p in result.passages if p.document_name == HUID_DOC), None
             )
+            if top is not None:
+                citation = top.as_citation()
+                check(
+                    "the citation names a real page and title",
+                    citation["pageNumber"] >= 1 and citation["title"] == HUID_DOC,
+                )
 
         # --- Step 3: access control --------------------------------------
         print("\nStep 3 - access control")
-        confidential = db.get(Document, "doc-5")
+        analytics = db.get(Document, "int-analytics")
+        analytics_q = "Query volume 18,240 helpdesk analytics"
 
-        safety_docs = list(db.scalars(visible_documents_query(safety)))
+        for label, user in (
+            ("Ananya (Certification Officer)", certification),
+            ("Dev (Hallmarking Officer)", hallmarking),
+            ("a visitor", guest),
+        ):
+            check(
+                f"{label} cannot list the internal analytics report",
+                analytics.id not in visible_ids(db, user),
+            )
+            hit = search(db, user, analytics_q)
+            check(
+                f"{label} cannot retrieve the internal analytics report",
+                all(p.document_id != analytics.id for p in hit.passages)
+                and all("18,240" not in p.text for p in hit.passages),
+            )
+        owner_hit = search(db, owner, analytics_q)
         check(
-            "Dev sees only Safety material",
-            all(d.folder == "Safety" for d in safety_docs) and len(safety_docs) >= 1,
-            f"sees {[d.name for d in safety_docs]}",
+            "Sanyam can retrieve the internal analytics report",
+            any(p.document_id == analytics.id for p in owner_hit.passages),
+            "the owner should reach int-analytics - if not, the punchline is gone",
         )
 
-        margin_q = "hydrocracker margin per tonne"
-        dev_hit = search(db, safety, margin_q)
+        # Public material is everyone's; desks are scoped to their staff.
+        guest_visible = visible_ids(db, guest)
+        ananya_visible = visible_ids(db, certification)
+        dev_visible = visible_ids(db, hallmarking)
+        for label, visible in (
+            ("a visitor", guest_visible),
+            ("Ananya", ananya_visible),
+            ("Dev", dev_visible),
+        ):
+            check(
+                f"{label} can read all 19 public documents",
+                set(PUBLIC_IDS) <= visible,
+            )
         check(
-            "Dev cannot retrieve the confidential audit",
-            all(p.document_id != confidential.id for p in dev_hit.passages),
+            "a visitor sees no desk document",
+            not guest_visible & {"int-cert", "int-hallmark"},
         )
-        eng_hit = search(db, engineer, margin_q)
         check(
-            "Ananya cannot retrieve the confidential audit",
-            all(p.document_id != confidential.id for p in eng_hit.passages),
+            "Ananya reaches the Certification Desk and not the Hallmarking Desk",
+            "int-cert" in ananya_visible and "int-hallmark" not in ananya_visible,
         )
-        owner_hit = search(db, owner, margin_q)
         check(
-            "Sanyam can retrieve the confidential audit",
-            any(p.document_id == confidential.id for p in owner_hit.passages),
-            "the owner should reach doc-5 - if not, the demo's punchline is gone",
+            "Dev reaches the Hallmarking Desk and not the Certification Desk",
+            "int-hallmark" in dev_visible and "int-cert" not in dev_visible,
+        )
+        cd_hit = search(db, guest, "CD-7 escalation code certification desk")
+        check(
+            "the desk escalation guide never reaches a visitor's retrieval",
+            all(p.document_id != "int-cert" for p in cd_hit.passages),
         )
 
         # The other half of the claim, and the harder one to make: owner
@@ -148,74 +217,83 @@ def main() -> int:
         # exactly one person, and an administrator is not an exception.
         # Asserted against the query the API actually uses rather than a
         # separate reimplementation of the rule.
-        from app.database.models import Document as DocumentModel
-
-        probe = DocumentModel(
+        probe = Document(
             id="verify-personal-probe",
             name="Ananya's private note.txt",
             type="TXT",
             folder=PERSONAL_FOLDER,
-            owner_id=engineer.id,
+            owner_id=certification.id,
             storage_path=None,
         )
         db.add(probe)
         db.flush()
 
-        owner_visible = {d.id for d in db.scalars(visible_documents_query(owner))}
-        engineer_visible = {d.id for d in db.scalars(visible_documents_query(engineer))}
-
         check(
             "Sanyam cannot see Ananya's personal upload",
-            probe.id not in owner_visible,
+            probe.id not in visible_ids(db, owner),
             "owner clearance must not reach another user's personal space",
         )
         check(
             "Ananya can see her own personal upload",
-            probe.id in engineer_visible,
+            probe.id in visible_ids(db, certification),
             "a personal document must still reach the person who uploaded it",
         )
         check(
             "an administrator cannot publish it on her behalf",
-            publish_error(owner, probe, "All Units") is not None,
+            publish_error(owner, probe, "Certification Schemes") is not None,
             "otherwise publish-then-read walks straight round the guarantee",
         )
 
-        db.rollback()
-
         # --- Step 4: agents narrow ---------------------------------------
         print("\nStep 4 - agents are configuration")
-        maintenance = db.get(Agent, "maint-intel")
-        sop = db.get(Agent, "sop-assistant")
-        check("both demo agents exist", maintenance is not None and sop is not None)
+        cert_guide = db.get(Agent, "certification-guide")
+        lab_locator = db.get(Agent, "lab-locator")
+        check(
+            "both demo agents exist",
+            cert_guide is not None and lab_locator is not None,
+        )
 
-        if maintenance and sop:
-            pump_q = "acceptable vibration limit for a CDU-II pump"
-            with_maint = search(db, owner, pump_q, maintenance)
-            with_sop = search(db, owner, pump_q, sop)
+        if cert_guide and lab_locator:
+            licence_q = "ISI mark licence under Scheme-I product certification"
+            with_cert = search(db, owner, licence_q, cert_guide)
+            with_lab = search(db, owner, licence_q, lab_locator)
             check(
-                "Maintenance Intelligence finds the pump SOP",
-                any("Centrifugal Pump" in p.document_name for p in with_maint.passages),
+                "Certification Guide finds the Scheme-I page",
+                any("Scheme-I" in p.document_name for p in with_cert.passages),
             )
             check(
-                "SOP Assistant does not - it is scoped elsewhere",
-                not any(
-                    "Centrifugal Pump" in p.document_name for p in with_sop.passages
-                ),
+                "Lab Locator does not - it is scoped to Laboratories",
+                not any("Scheme-I" in p.document_name for p in with_lab.passages),
                 "both agents returning the same thing makes step 4 pointless",
+            )
+            lab_q = "how does BIS recognise a testing laboratory"
+            check(
+                "Lab Locator finds the laboratory pages",
+                any(
+                    "Laborator" in p.document_name
+                    for p in search(db, owner, lab_q, lab_locator).passages
+                ),
             )
 
         # --- Step 5: tools ------------------------------------------------
         print("\nStep 5 - tools that run")
-        if maintenance:
-            permitted = {t.name for t in registry.available_for(db, maintenance)}
+        hallmark_helper = db.get(Agent, "hallmark-helper")
+        if hallmark_helper and lab_locator:
+            helper_tools = {t.name for t in registry.available_for(db, hallmark_helper)}
+            lab_tools = {t.name for t in registry.available_for(db, lab_locator)}
             check(
-                "Maintenance Intelligence has the calculator and table tool",
-                {"calculator", "analyse_table"} <= permitted,
-                f"has {sorted(permitted)}",
+                "Hallmarking & Consumer Help has the calculator",
+                "calculator" in helper_tools,
+                f"has {sorted(helper_tools)}",
+            )
+            check(
+                "Lab Locator reads documents only - no calculator",
+                lab_tools
+                == {"document_search", "knowledge_retrieval", "read_document"},
+                f"has {sorted(lab_tools)}",
             )
 
-            context = ToolContext(db=db, user=owner, agent=maintenance)
-
+            context = ToolContext(db=db, user=owner, agent=hallmark_helper)
             calculator = registry.by_wire_name("calculator")
             volume = calculator.run(context, expression="47.5 * 18.25")
             check(
@@ -224,18 +302,34 @@ def main() -> int:
                 volume.content,
             )
 
-            table = registry.by_wire_name("analyse_table")
-            total = table.run(
-                context,
-                operation="sum",
-                column="DowntimeHours",
-                document="Maintenance History",
-            )
-            check(
-                "table tool sums the downtime column",
-                total.ok and "148" in total.content,
-                total.content,
-            )
+        # The standard finder answers a visitor from the published lists.
+        finder = registry.by_wire_name("find_standard")
+        visitor_context = ToolContext(
+            db=db, user=guest, agent=db.get(Agent, "standards-finder")
+        )
+        cooker = finder.run(visitor_context, product="pressure cooker")
+        check(
+            "the standard finder maps 'pressure cooker' to IS 2347",
+            cooker.ok and "IS 2347" in cooker.content,
+            cooker.content[:300],
+        )
+        check("the finder's answer is cited", bool(cooker.citations))
+
+        # The Hallmarking Desk register is computed exactly, for the staff
+        # member whose desk it is.
+        table = registry.by_wire_name("analyse_table")
+        desk_context = ToolContext(db=db, user=hallmarking, agent=db.get(Agent, "si-1"))
+        total = table.run(
+            desk_context,
+            operation="sum",
+            column="DaysOpen",
+            document="Hallmarking Complaint Register",
+        )
+        check(
+            "table tool sums the DaysOpen column to 72",
+            total.ok and "72" in total.content,
+            total.content,
+        )
 
         image_tool = db.get(Tool, "img-analyzer")
         executable, reason = registry.describe(image_tool)
@@ -247,26 +341,29 @@ def main() -> int:
         # --- Step 6: refusal ----------------------------------------------
         print("\nStep 6 - what it refuses to do")
 
-        unrelated = search(db, owner, "die swell coefficient for polymer extrusion")
+        unrelated = search(db, guest, "tuning frequencies for an orchestral xylophone")
         check(
             "a wholly unrelated question retrieves nothing",
             not unrelated.found,
             f"unexpectedly matched {[p.document_name for p in unrelated.passages]}",
         )
 
-        # The realistic case: keyword search legitimately matches on "SOP",
-        # "pump" and "procedure", so passages come back. What must hold is
-        # that none of them contain the invented identifiers - leaving the
-        # model nothing to hang a fabricated citation on.
-        invented = search(db, owner, "SOP-CDU2-0999 procedure for pump P-999")
+        # The realistic case: keyword search legitimately matches on
+        # "licence" and "certification", so passages come back. What must
+        # hold is that none of them contain the invented identifiers -
+        # leaving the model nothing to hang a fabricated citation on.
+        invented = search(db, guest, "clause BIS-CL-0999 licence LIC-999 certification")
         check(
-            "no retrieved passage contains the invented SOP number",
+            "no retrieved passage contains the invented clause number",
             all("0999" not in p.text for p in invented.passages),
         )
         check(
-            "no retrieved passage contains the invented tag",
-            all("P-999" not in p.text for p in invented.passages),
+            "no retrieved passage contains the invented licence number",
+            all("LIC-999" not in p.text for p in invented.passages),
         )
+
+        # Nothing above is meant to persist: drop the visitor and the probe.
+        db.rollback()
 
         # --- Routing --------------------------------------------------
         print("\nModel routing")
@@ -310,3 +407,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

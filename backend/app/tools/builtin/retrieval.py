@@ -58,8 +58,8 @@ class DocumentSearchTool(Tool):
                 "query": {
                     "type": "string",
                     "description": (
-                        "What to search for. Include equipment tags and "
-                        "identifiers verbatim (P-204, CDU-II, API 610) - they "
+                        "What to search for, in English. Include identifiers "
+                        "verbatim (IS 2347, IS/IEC 60947, HUID, CRS) - they "
                         "match exactly and are the strongest signal."
                     ),
                 },

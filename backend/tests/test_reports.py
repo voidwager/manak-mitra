@@ -5,7 +5,7 @@ official, it gets forwarded out of the conversation that produced it, and
 nothing downstream re-checks it. The previous implementation was built in the
 browser and filled every field it could not compute with a plausible-sounding
 constant - including a risk rating of "Moderate Risk" that nothing had
-assessed, under a real refinery operator's letterhead, over synthetic data.
+assessed, under a real public body's letterhead, over synthetic data.
 
 So the rules under test are about provenance, not formatting:
 
@@ -63,20 +63,20 @@ class DraftingProvider(ModelProvider):
 
 
 DRAFT = {
-    "title": "Pump P-204 Vibration Assessment",
-    "summary": "Vibration must stay at or below 2.5 mm/s RMS.",
+    "title": "Marking Fee Tolerance Assessment",
+    "summary": "The marking fee tolerance must stay at or below 2.5 percent.",
     "findings": [
-        "Acceptable vibration is 2.5 mm/s RMS in any direction [1].",
-        "Above 3.2 mm/s RMS the pump is withdrawn from service [1].",
+        "The acceptable tolerance is 2.5 percent in any quarter [1].",
+        "Above 3.2 percent the licence is placed under review [1].",
     ],
-    "recommendations": ["Schedule an alignment check within seven days."],
+    "recommendations": ["Schedule a factory inspection within seven days."],
 }
 
 REAL_SOURCE = {
-    "documentId": "doc-1",
-    "title": "Centrifugal Pump Inspection SOP.pdf",
-    "page": "Page 4 · 4.2 VIBRATION",
-    "excerpt": "Acceptable vibration: 2.5 mm/s RMS.",
+    "documentId": "int-cert",
+    "title": "Certification Desk Escalation Guide (sample).md",
+    "page": "Page 4 · 4.2 FEE TOLERANCE",
+    "excerpt": "Acceptable tolerance: 2.5 percent.",
 }
 
 
@@ -98,8 +98,8 @@ def _thread(db, *, user_id="user-ananya", text, sources=None, trace=None, suffix
         id=f"conv-report{suffix}",
         title="report",
         user_id=user_id,
-        agent_id="maint-intel",
-        agent_name="Maintenance Intelligence",
+        agent_id="certification-guide",
+        agent_name="Certification Guide",
     )
     db.add(conversation)
     db.flush()
@@ -108,7 +108,7 @@ def _thread(db, *, user_id="user-ananya", text, sources=None, trace=None, suffix
             id=f"msg-report-q{suffix}",
             conversation_id=conversation.id,
             sender="user",
-            text="What is the acceptable vibration limit for a CDU-II pump?",
+            text="What is the acceptable marking fee tolerance for a licence?",
             position=1,
         )
     )
@@ -138,14 +138,14 @@ def test_the_model_cannot_add_a_source_that_was_never_retrieved(
             {
                 **DRAFT,
                 "findings": [
-                    "Per the Hydrocracker Unit Strategic Audit.pdf, margins are strong.",
-                    "Acceptable vibration is 2.5 mm/s RMS [1].",
+                    "Per the Helpdesk Query Analytics Q2 2026 (sample).md, margins are strong.",
+                    "The acceptable tolerance is 2.5 percent [1].",
                 ],
             }
         )
     )
     conversation, reply = _thread(
-        db_session, text="Vibration limit is 2.5 mm/s RMS.", sources=[REAL_SOURCE]
+        db_session, text="The tolerance limit is 2.5 percent.", sources=[REAL_SOURCE]
     )
 
     report = reports.generate_for_message(
@@ -153,8 +153,8 @@ def test_the_model_cannot_add_a_source_that_was_never_retrieved(
     )
 
     titles = {s["title"] for s in report["sources"]}
-    assert titles == {"Centrifugal Pump Inspection SOP.pdf"}
-    assert "Hydrocracker Unit Strategic Audit.pdf" not in titles
+    assert titles == {"Certification Desk Escalation Guide (sample).md"}
+    assert "Helpdesk Query Analytics Q2 2026 (sample).md" not in titles
 
     db_session.rollback()
 
@@ -163,11 +163,11 @@ def test_tools_run_are_read_from_the_stored_trace(db_session, drafting_gateway):
     drafting_gateway(DraftingProvider(DRAFT))
     conversation, reply = _thread(
         db_session,
-        text="Vibration limit is 2.5 mm/s RMS.",
+        text="The tolerance limit is 2.5 percent.",
         sources=[REAL_SOURCE],
         trace=[
             {"label": "Task received", "status": "done"},
-            {"label": "Tool: read_document(document=Centrifugal Pump...)", "status": "done"},
+            {"label": "Tool: read_document(document=Certification Desk Escalation...)", "status": "done"},
             {"label": "Tool: calculator(expression=2+2)", "status": "done"},
         ],
         suffix="-tools",
@@ -186,7 +186,7 @@ def test_no_risk_rating_is_invented(db_session, drafting_gateway):
     drafting_gateway(DraftingProvider(DRAFT))
     conversation, reply = _thread(
         db_session,
-        text="Vibration limit is 2.5 mm/s RMS.",
+        text="The tolerance limit is 2.5 percent.",
         sources=[REAL_SOURCE],
         suffix="-risk",
     )
@@ -207,7 +207,7 @@ def test_an_uncited_reply_produces_a_report_with_an_empty_evidence_trail(
     drafting_gateway(DraftingProvider(DRAFT))
     conversation, reply = _thread(
         db_session,
-        text="General guidance on pump vibration. " * 20,
+        text="General guidance on marking fee tolerance. " * 20,
         sources=None,
         suffix="-uncited",
     )
@@ -244,7 +244,7 @@ def test_a_stored_report_is_returned_rather_than_regenerated(
     provider = drafting_gateway(DraftingProvider(DRAFT))
     conversation, reply = _thread(
         db_session,
-        text="Vibration limit is 2.5 mm/s RMS.",
+        text="The tolerance limit is 2.5 percent.",
         sources=[REAL_SOURCE],
         suffix="-stored",
     )
@@ -286,7 +286,7 @@ def test_another_users_message_is_not_reportable(client, safety_headers, db_sess
     """
     conversation, reply = _thread(
         db_session,
-        text="Vibration limit is 2.5 mm/s RMS.",
+        text="The tolerance limit is 2.5 percent.",
         sources=[REAL_SOURCE],
         suffix="-other",
     )

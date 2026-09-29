@@ -1,4 +1,4 @@
-"""SYNQ Workbench - API entrypoint.
+"""Manak Mitra - API entrypoint.
 
 Application data (users, agents, documents, tools, conversations,
 settings) is served from PostgreSQL or the SQLite development fallback,
@@ -54,7 +54,7 @@ app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     description=(
-        "Backend for the SYNQ Workbench (SIH 2026 / SIH26117). "
+        "Backend for the Manak Mitra (SIH 2026 / SIH26107). "
         "Prototype - see /api/health for the authoritative list of "
         "implemented capabilities."
     ),

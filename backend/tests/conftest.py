@@ -26,7 +26,7 @@ import pytest
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 
-_TMP_ROOT = Path(tempfile.mkdtemp(prefix="synq-workbench-tests-"))
+_TMP_ROOT = Path(tempfile.mkdtemp(prefix="manak-mitra-tests-"))
 
 os.environ["DATABASE_URL"] = f"sqlite:///{(_TMP_ROOT / 'test.db').as_posix()}"
 os.environ["UPLOAD_DIR"] = str(_TMP_ROOT / "uploads")

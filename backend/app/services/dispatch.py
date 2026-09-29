@@ -143,7 +143,7 @@ def choose(db: Session, agent: Agent | None, question: str) -> Dispatch:
     if not specialists:
         return Dispatch(
             specialist=None,
-            reason="No specialists are available, so SI-1 answered directly.",
+            reason="No specialists are available, so Manak Mitra answered directly.",
             dispatched=False,
         )
 
@@ -172,7 +172,7 @@ def choose(db: Session, agent: Agent | None, question: str) -> Dispatch:
         log.warning("Specialist routing unavailable: %s", exc)
         return Dispatch(
             specialist=None,
-            reason="Specialist routing was unavailable, so SI-1 answered directly.",
+            reason="Specialist routing was unavailable, so Manak Mitra answered directly.",
             dispatched=False,
         )
 
@@ -184,19 +184,19 @@ def choose(db: Session, agent: Agent | None, question: str) -> Dispatch:
         # is how it went unnoticed until a live run.
         log.warning(
             "Specialist router returned nothing (finish_reason=%s); "
-            "SI-1 answering directly.",
+            "Manak Mitra answering directly.",
             completion.finish_reason,
         )
         return Dispatch(
             specialist=None,
-            reason="Specialist routing returned no answer, so SI-1 answered directly.",
+            reason="Specialist routing returned no answer, so Manak Mitra answered directly.",
             dispatched=False,
         )
 
     if choice.startswith("general"):
         return Dispatch(
             specialist=None,
-            reason="No specialist was needed, so SI-1 answered directly.",
+            reason="No specialist was needed, so Manak Mitra answered directly.",
             dispatched=True,
         )
 
@@ -213,7 +213,7 @@ def choose(db: Session, agent: Agent | None, question: str) -> Dispatch:
         log.info("Specialist router returned %r, which matched nothing", choice)
         return Dispatch(
             specialist=None,
-            reason="No specialist matched, so SI-1 answered directly.",
+            reason="No specialist matched, so Manak Mitra answered directly.",
             dispatched=True,
         )
 

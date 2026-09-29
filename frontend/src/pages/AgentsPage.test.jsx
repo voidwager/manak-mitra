@@ -28,9 +28,9 @@ vi.mock('../state/AppContext', () => ({
 const { AgentsPage } = await import('./AgentsPage');
 
 const READY_AGENT = {
-  id: 'sop-assistant',
-  name: 'SOP Assistant',
-  description: 'Answers from approved procedures.',
+  id: 'lab-locator',
+  name: 'Lab Locator',
+  description: 'Finds BIS-recognised labs by state.',
   icon: 'FileText',
   model: 'qwen/qwen3.8-27b',
   status: 'Ready',
@@ -40,13 +40,13 @@ const READY_AGENT = {
     {
       label: 'Document retrieval with citations',
       available: true,
-      detail: 'Searches Safety.',
+      detail: 'Searches Laboratories.',
     },
   ],
-  specialisations: ['SOP Lookup'],
+  specialisations: ['Recognised labs by state'],
   tools: ['Document Search'],
   retrievalEnabled: true,
-  folderScope: ['Safety'],
+  folderScope: ['Laboratories'],
   isSystem: true,
   createdById: null,
 };
@@ -54,7 +54,7 @@ const READY_AGENT = {
 const LIMITED_AGENT = {
   ...READY_AGENT,
   id: 'doc-vision',
-  name: 'Document Vision',
+  name: 'Mark & Label Reader',
   status: 'Limited',
   statusDetail: '1 of its declared capabilities cannot run yet.',
   capabilities: [
@@ -73,6 +73,7 @@ beforeEach(() => {
   context.agents = [];
   context.activeAgent = null;
   context.health = { inference: { onPremise: false } };
+  context.isGuest = false;
 });
 
 describe('AgentsPage', () => {
@@ -127,7 +128,7 @@ describe('AgentsPage', () => {
   it('states the agent retrieval scope on the card', () => {
     context.agents = [READY_AGENT];
     render(<AgentsPage />);
-    expect(screen.getByText('Searches Safety')).toBeInTheDocument();
+    expect(screen.getByText('Searches Laboratories')).toBeInTheDocument();
   });
 
   it('says plainly when an agent does not search at all', () => {
@@ -136,5 +137,18 @@ describe('AgentsPage', () => {
     expect(
       screen.getByText('Does not search the knowledge base'),
     ).toBeInTheDocument();
+  });
+
+  it('offers staff a way to create an agent', () => {
+    render(<AgentsPage />);
+    expect(screen.getByText('Create Agent')).toBeInTheDocument();
+  });
+
+  it('does not offer a visitor something the server will refuse', () => {
+    // POST /agents is 403 for a visitor, because an agent is listed for
+    // every user. A button that always fails reads as a broken site.
+    context.isGuest = true;
+    render(<AgentsPage />);
+    expect(screen.queryByText('Create Agent')).not.toBeInTheDocument();
   });
 });

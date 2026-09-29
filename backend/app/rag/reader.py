@@ -107,6 +107,11 @@ _GENERIC_TOKENS = frozenset(
         "document",
         "documents",
         "the",
+        "md",
+        # Labels a demo file carries in its title, not what it is about:
+        # "(sample)" on two different documents made one resolve to the
+        # other.
+        "sample",
     }
 )
 

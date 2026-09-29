@@ -46,20 +46,20 @@ class Settings(BaseSettings):
     )
 
     # --- Application ---------------------------------------------------
-    app_name: str = "SYNQ Workbench API"
+    app_name: str = "Manak Mitra API"
     app_env: str = "development"
     debug: bool = True
     api_prefix: str = "/api"
 
     # --- Database -------------------------------------------------------
     # PostgreSQL is the target database for this project.
-    #   postgresql+psycopg://user:password@host:5432/synq_workbench
+    #   postgresql+psycopg://user:password@host:5432/manak_mitra
     #
     # `database_url` is intentionally left empty by default so a developer
     # without a local PostgreSQL server still gets a working backend via
     # the SQLite fallback below. Set DATABASE_URL in .env to use PostgreSQL.
     database_url: str = ""
-    sqlite_fallback_path: str = "data/synq_workbench.db"
+    sqlite_fallback_path: str = "data/manak_mitra.db"
     sql_echo: bool = False
 
     # --- Storage --------------------------------------------------------

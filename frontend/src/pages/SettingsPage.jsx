@@ -2,10 +2,10 @@ import React from 'react';
 import { useApp } from '../state/AppContext';
 import { api } from '../services/api';
 import {
-  SynqBrand,
+  BrandMark,
   BRAND_VARIANTS,
   useBrandVariant
-} from '../components/layout/SynqBrand';
+} from '../components/layout/BrandMark';
 import {
   Sun,
   Moon,
@@ -63,7 +63,7 @@ export const SettingsPage = () => {
     <div className="page-container animate-fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Workbench Settings</h1>
+          <h1 className="page-title">Settings</h1>
           <p className="page-subtitle">Configure theme system, interface layout, and sovereign AI engine preferences.</p>
         </div>
       </div>
@@ -159,7 +159,7 @@ export const SettingsPage = () => {
                   aria-pressed={brandVariant === option.id}
                 >
                   <div className="brand-option-stage">
-                    <SynqBrand variant={option.id} />
+                    <BrandMark variant={option.id} />
                   </div>
                   <div className="theme-label-row">
                     <span>{option.label}</span>

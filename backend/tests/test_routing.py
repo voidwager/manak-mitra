@@ -245,11 +245,11 @@ def test_an_attached_document_is_indexed_for_that_chat_only(
     """
     stub_gateway(StubProvider())
 
-    body = b"The turbine trip setpoint for unit TG-9 is 3412 rpm."
+    body = b"The licence renewal fee for unit LU-9 is 3412 rupees."
     attached = client.post(
         "/api/attachments",
         headers=owner_headers,
-        files={"file": ("trip-setpoints.txt", io.BytesIO(body), "text/plain")},
+        files={"file": ("renewal-fees.txt", io.BytesIO(body), "text/plain")},
     )
     assert attached.status_code == 201
 
@@ -264,7 +264,7 @@ def test_an_attached_document_is_indexed_for_that_chat_only(
     # Not in the corpus: a plain search finds nothing, because it belongs to
     # a conversation that has not been named yet.
     hits = client.post(
-        "/api/search", headers=owner_headers, json={"query": "TG-9 trip setpoint"}
+        "/api/search", headers=owner_headers, json={"query": "LU-9 renewal fee"}
     ).json()
     assert all(h["documentId"] != document_id for h in hits["results"])
 
@@ -274,9 +274,9 @@ def test_an_attached_document_is_indexed_for_that_chat_only(
         "/api/chat",
         headers=owner_headers,
         json={
-            "message": "What is the trip setpoint for TG-9?",
+            "message": "What is the renewal fee for LU-9?",
             "attachments": [
-                {"id": attached.json()["id"], "name": "trip-setpoints.txt"}
+                {"id": attached.json()["id"], "name": "renewal-fees.txt"}
             ],
         },
     )
@@ -290,7 +290,7 @@ def test_an_attached_document_is_indexed_for_that_chat_only(
     other = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "What is the trip setpoint for TG-9?"},
+        json={"message": "What is the renewal fee for LU-9?"},
     )
     assert other.status_code == 200
     assert other.json()["conversationId"] != conversation_id
@@ -403,7 +403,7 @@ def test_the_trace_no_longer_claims_attachments_are_never_parsed(
     created = client.post(
         "/api/attachments",
         headers=owner_headers,
-        files={"file": ("notes.txt", io.BytesIO(b"pump notes"), "text/plain")},
+        files={"file": ("notes.txt", io.BytesIO(b"licence notes"), "text/plain")},
     ).json()
 
     body = client.post(
@@ -586,7 +586,7 @@ def test_an_indexed_attachment_that_matched_nothing_is_not_claimed_as_context(
         db_session,
         resolved,
         {"attendance.pdf": attached["documentId"]},
-        {"doc-1", "doc-2"},
+        {"bis-01", "bis-02"},
     )
 
     assert resolved.contributed == []

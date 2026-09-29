@@ -15,12 +15,12 @@ import re
 
 import pytest
 
-PUMP_TEXT = (
-    b"Section 6.1 Coupling alignment\n"
+LICENCE_TEXT = (
+    b"Section 6.1 Licence renewal\n"
     b"\n"
-    b"Pump P-3140 coupling alignment is verified with a laser tool after any\n"
-    b"bearing replacement. Angular misalignment above 0.05 mm per 100 mm\n"
-    b"requires shimming before the pump is returned to service.\n"
+    b"Licence L-3140 renewal is verified with an inspection after any change\n"
+    b"of premises. A marking fee discrepancy above 0.05 percent of turnover\n"
+    b"requires re-rating before the licence is renewed.\n"
 )
 
 
@@ -29,19 +29,19 @@ def _unique_text(marker: str) -> bytes:
 
     Retrieval returns a ranked top-k, so "is this id in the results" is only
     a question about permissions when nothing else competes for the same
-    query. Sharing PUMP_TEXT across every upload made that assertion depend
+    query. Sharing LICENCE_TEXT across every upload made that assertion depend
     on how many other tests had run first.
     """
     return (
-        f"Section 6.1 {marker} alignment\n"
+        f"Section 6.1 {marker} renewal\n"
         f"\n"
-        f"Pump {marker} coupling alignment is verified with a laser tool after\n"
-        f"any bearing replacement. Angular misalignment above 0.05 mm per\n"
-        f"100 mm requires shimming before the pump is returned to service.\n"
+        f"Licence {marker} renewal is verified with an inspection after any\n"
+        f"change of premises. A marking fee discrepancy above 0.05 percent of\n"
+        f"turnover requires re-rating before the licence is renewed.\n"
     ).encode()
 
 
-def _upload(client, headers, name: str, data: bytes = PUMP_TEXT) -> dict:
+def _upload(client, headers, name: str, data: bytes = LICENCE_TEXT) -> dict:
     created = client.post(
         "/api/documents",
         headers=headers,
@@ -64,10 +64,16 @@ def test_folders_lists_the_namespace_and_what_the_user_may_use(
     body = client.get("/api/folders", headers=engineer_headers).json()
 
     assert body["unrestricted"] is False
-    # Ananya is assigned to CDU-II, plus her personal namespace.
-    assert set(body["assignable"]) == {"Personal Uploads", "CDU-II"}
+    # Ananya is assigned to the Certification Desk, plus her personal
+    # namespace. The public folders are hers to read but not to file into.
+    assert set(body["assignable"]) == {"Personal Uploads", "Certification Desk"}
     # The full namespace is informational and is wider than her grant.
-    assert set(body["all"]) >= {"CDU-II", "Safety", "BIS Internal"}
+    assert set(body["all"]) >= {
+        "Certification Desk",
+        "Hallmarking Desk",
+        "BIS Internal",
+        "Hallmarking",
+    }
     assert set(body["assignable"]) <= set(body["all"])
 
 
@@ -93,10 +99,10 @@ def test_publishing_a_document_changes_who_can_retrieve_it(
     doc = _upload(
         client,
         engineer_headers,
-        "coupling-alignment.txt",
+        "licence-renewal.txt",
         _unique_text("PUBLISH-4417"),
     )
-    query = "PUBLISH-4417 coupling alignment"
+    query = "PUBLISH-4417 licence renewal"
     assert doc["folder"] == "Personal Uploads"
     assert doc["visibility"] == "personal"
     assert doc["status"] == "Indexed"
@@ -105,27 +111,36 @@ def test_publishing_a_document_changes_who_can_retrieve_it(
     assert doc["id"] not in _search(client, safety_headers, query)
     assert doc["id"] not in _search(client, owner_headers, query)
 
-    # Ananya may not file into Safety - she is not assigned to it.
+    # Ananya may not file into the Hallmarking Desk - she is not assigned to it.
     refused = client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "Safety"},
+        json={"folder": "Hallmarking Desk"},
     )
     assert refused.status_code == 403
-    assert "not assigned to 'Safety'" in refused.json()["detail"]
+    assert "not assigned to 'Hallmarking Desk'" in refused.json()["detail"]
+
+    # Nor into a public folder: that would publish to every visitor, and
+    # only an administrator may do that.
+    refused_public = client.patch(
+        f"/api/documents/{doc['id']}",
+        headers=engineer_headers,
+        json={"folder": "Certification Schemes"},
+    )
+    assert refused_public.status_code == 403
 
     # She publishes into a folder she is actually on.
     moved = client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "CDU-II"},
+        json={"folder": "Certification Desk"},
     )
     assert moved.status_code == 200
-    assert moved.json()["folder"] == "CDU-II"
+    assert moved.json()["folder"] == "Certification Desk"
     assert moved.json()["visibility"] == "shared"
 
     # Now it is shared, the owner can retrieve it. Dev still cannot - he is
-    # not on CDU-II, and publishing is not the same as publishing to all.
+    # not on the Certification Desk, and publishing is not the same as publishing to all.
     assert doc["id"] in _search(client, owner_headers, query)
     assert doc["id"] not in _search(client, safety_headers, query)
 
@@ -136,7 +151,7 @@ def test_an_administrator_cannot_read_a_personal_document(
     """The guarantee the word "personal" has to earn.
 
     Owner clearance used to return every row, so an administrator silently
-    read every engineer's private uploads - and the assistant would quote
+    read every officer's private uploads - and the assistant would quote
     them back in an answer, paraphrased, where nobody re-checks permissions.
     """
     doc = _upload(client, engineer_headers, "private-notes.txt")
@@ -145,7 +160,7 @@ def test_an_administrator_cannot_read_a_personal_document(
     assert client.get(f"/api/documents/{doc['id']}", headers=owner_headers).status_code == 404
     listed = client.get("/api/documents", headers=owner_headers).json()
     assert doc["id"] not in {d["id"] for d in listed}
-    assert doc["id"] not in _search(client, owner_headers, "P-3140 coupling alignment")
+    assert doc["id"] not in _search(client, owner_headers, "P-3140 licence renewal")
 
     # And the uploader still has it.
     assert client.get(f"/api/documents/{doc['id']}", headers=engineer_headers).status_code == 200
@@ -164,7 +179,7 @@ def test_an_administrator_cannot_publish_someone_elses_personal_document(
     response = client.patch(
         f"/api/documents/{doc['id']}",
         headers=owner_headers,
-        json={"folder": "All Units"},
+        json={"folder": "Certification Schemes"},
     )
     # 404 rather than 403: confirming it exists would itself leak something.
     assert response.status_code == 404
@@ -180,12 +195,12 @@ def test_moving_back_to_personal_uploads_withdraws_the_document(
     doc = _upload(
         client, engineer_headers, "withdraw-me.txt", _unique_text("WITHDRAW-2280")
     )
-    query = "WITHDRAW-2280 coupling alignment"
+    query = "WITHDRAW-2280 licence renewal"
 
     client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "CDU-II"},
+        json={"folder": "Certification Desk"},
     )
     assert doc["id"] in _search(client, owner_headers, query)
 
@@ -215,7 +230,7 @@ def test_an_administrator_can_withdraw_a_shared_document(
     client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "CDU-II"},
+        json={"folder": "Certification Desk"},
     )
 
     pulled = client.patch(
@@ -257,9 +272,9 @@ def test_marking_confidential_removes_a_document_from_other_users_retrieval(
     # Every upload starts personal now, an administrator's included. Put it
     # somewhere Ananya can reach.
     client.patch(
-        f"/api/documents/{doc['id']}", headers=owner_headers, json={"folder": "CDU-II"}
+        f"/api/documents/{doc['id']}", headers=owner_headers, json={"folder": "Certification Desk"}
     )
-    query = "BOARDONLY-9931 coupling alignment"
+    query = "BOARDONLY-9931 licence renewal"
     assert doc["id"] in _search(client, engineer_headers, query)
 
     client.patch(
@@ -315,7 +330,7 @@ def test_ownership_transfer_is_owner_clearance_only(client, owner_headers, engin
     client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "CDU-II"},
+        json={"folder": "Certification Desk"},
     )
 
     accepted = client.patch(
@@ -339,7 +354,7 @@ def test_editing_someone_elses_document_is_refused(client, owner_headers, engine
     client.patch(
         f"/api/documents/{doc['id']}",
         headers=owner_headers,
-        json={"folder": "Safety"},
+        json={"folder": "Hallmarking Desk"},
     )
 
     assert client.get(f"/api/documents/{doc['id']}", headers=safety_headers).status_code == 200
@@ -351,9 +366,9 @@ def test_editing_someone_elses_document_is_refused(client, owner_headers, engine
 
 
 def test_editing_an_invisible_document_is_a_404_not_a_403(client, engineer_headers):
-    """A 403 would confirm doc-5 exists. Same rule as the read path."""
+    """A 403 would confirm int-analytics exists. Same rule as the read path."""
     response = client.patch(
-        "/api/documents/doc-5", headers=engineer_headers, json={"name": "peek.pdf"}
+        "/api/documents/int-analytics", headers=engineer_headers, json={"name": "peek.md"}
     )
     assert response.status_code == 404
 
@@ -369,9 +384,9 @@ def test_rename_changes_the_display_name_but_not_the_stored_file(
     renamed = client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"name": "Coupling Alignment SOP.txt"},
+        json={"name": "Licence Renewal Guide.txt"},
     ).json()
-    assert renamed["name"] == "Coupling Alignment SOP.txt"
+    assert renamed["name"] == "Licence Renewal Guide.txt"
 
     # The bytes are still reachable, so the rename did not orphan the file.
     assert client.get(
@@ -409,7 +424,7 @@ def test_download_returns_the_original_bytes_as_an_attachment(
         f"/api/documents/{doc['id']}/download", headers=engineer_headers
     )
     assert response.status_code == 200
-    assert response.content == PUMP_TEXT
+    assert response.content == LICENCE_TEXT
 
     # Never inline: an uploaded file rendered in the API's own origin is
     # stored XSS against everyone who opens it.
@@ -441,7 +456,7 @@ def test_downloading_a_catalogue_entry_explains_there_is_no_file(
             id="doc-no-bytes",
             name="Catalogue Only.pdf",
             type="PDF",
-            folder="All Units",
+            folder="Certification Desk",
             owner_id="user-sanyam",
             storage_path=None,
         )
@@ -455,9 +470,9 @@ def test_downloading_a_catalogue_entry_explains_there_is_no_file(
 
 def test_a_seeded_document_can_be_downloaded(client, owner_headers):
     """The demo corpus is real bytes, so the download path works on it."""
-    response = client.get("/api/documents/doc-1/download", headers=owner_headers)
+    response = client.get("/api/documents/bis-01/download", headers=owner_headers)
     assert response.status_code == 200
-    assert response.content.startswith(b"%PDF"), "expected a genuine PDF"
+    assert b"Scheme-I" in response.content, "expected the captured BIS page"
 
 
 def test_a_document_name_cannot_break_out_of_the_download_header(
@@ -505,7 +520,7 @@ def test_a_folder_move_is_audited_with_before_and_after(
     client.patch(
         f"/api/documents/{doc['id']}",
         headers=engineer_headers,
-        json={"folder": "CDU-II"},
+        json={"folder": "Certification Desk"},
     )
 
     entry = (
@@ -517,7 +532,7 @@ def test_a_folder_move_is_audited_with_before_and_after(
     assert entry is not None
     assert entry.detail["fields"] == ["folder"]
     assert entry.detail["before"]["folder"] == "Personal Uploads"
-    assert entry.detail["after"]["folder"] == "CDU-II"
+    assert entry.detail["after"]["folder"] == "Certification Desk"
 
 
 # ---------------------------------------------------------------------------
@@ -534,8 +549,8 @@ def test_promoting_a_chat_file_puts_it_in_the_knowledge_base(
         headers=engineer_headers,
         files={
             "file": (
-                "shift-notes.txt",
-                io.BytesIO(b"Bearing BRG-77 ran at 92 degrees on the night shift."),
+                "desk-notes.txt",
+                io.BytesIO(b"Enquiry ENQ-77 was answered within 92 minutes by the evening desk."),
                 "text/plain",
             )
         },
@@ -543,7 +558,7 @@ def test_promoting_a_chat_file_puts_it_in_the_knowledge_base(
     document_id = attached["documentId"]
 
     # Bound to no conversation yet, so retrieval finds nothing.
-    query = "BRG-77 night shift"
+    query = "ENQ-77 evening desk"
     assert document_id not in _search(client, engineer_headers, query)
 
     promoted = client.patch(
@@ -573,7 +588,7 @@ def test_only_the_uploader_can_promote_their_chat_file(
         files={
             "file": (
                 "not-yours.txt",
-                io.BytesIO(b"Compressor C-101 surge margin notes."),
+                io.BytesIO(b"Licence L-101 renewal margin notes."),
                 "text/plain",
             )
         },

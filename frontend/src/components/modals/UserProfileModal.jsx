@@ -32,7 +32,7 @@ export const UserProfileModal = ({ onClose }) => {
             </div>
             <div className="hero-info">
               <h3 className="hero-name">{currentUser?.name || 'Sanyam Jain'}</h3>
-              <p className="hero-role">{currentUser?.role || 'Owner / Plant Administrator'}</p>
+              <p className="hero-role">{currentUser?.role || 'Helpdesk staff'}</p>
               <div className="hero-badge">
                 <ShieldCheck size={14} />
                 <span>{currentUser?.accessLevel === 'OWNER' ? 'Owner Clearance · Full RAG Scope' : 'Employee Clearance · Restricted Scope'}</span>
@@ -46,7 +46,7 @@ export const UserProfileModal = ({ onClose }) => {
               <div className="detail-text">
                 <span className="detail-label">Email Address</span>
                 <span className="detail-val">
-                  {currentUser?.email || 'testowner@refinery.example'}
+                  {currentUser?.email || ''}
                 </span>
               </div>
             </div>

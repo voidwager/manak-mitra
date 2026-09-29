@@ -13,8 +13,8 @@ import { filenameFromDisposition } from './http';
 describe('filenameFromDisposition', () => {
   it('prefers the RFC 5987 encoded form, which survives non-ASCII', () => {
     const header =
-      "attachment; filename=\"Relief_Valve_SOP.txt\"; filename*=UTF-8''Relief%20Valve%20SOP.txt";
-    expect(filenameFromDisposition(header)).toBe('Relief Valve SOP.txt');
+      "attachment; filename=\"CRS_Registration_Guide.txt\"; filename*=UTF-8''CRS%20Registration%20Guide.txt";
+    expect(filenameFromDisposition(header)).toBe('CRS Registration Guide.txt');
   });
 
   it('decodes percent-encoded non-ASCII names', () => {

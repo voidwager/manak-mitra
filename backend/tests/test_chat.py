@@ -22,18 +22,18 @@ from tests.conftest import StubProvider
 # Non-streaming
 # ---------------------------------------------------------------------------
 def test_chat_returns_and_persists_the_model_reply(client, owner_headers, stub_gateway):
-    stub_gateway(StubProvider("Isolate the pump before inspection."))
+    stub_gateway(StubProvider("Check the HUID in the BIS CARE app before you buy."))
 
     response = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "How do I start a pump inspection?", "agentId": "maint-intel"},
+        json={"message": "How do I check a hallmark?", "agentId": "hallmark-helper"},
     )
     assert response.status_code == 200
     body = response.json()
 
     assert body["provider"] == "stub"
-    assert body["assistantMessage"]["text"] == "Isolate the pump before inspection."
+    assert body["assistantMessage"]["text"] == "Check the HUID in the BIS CARE app before you buy."
 
     # Both turns were written to the database.
     conv = client.get(
@@ -52,7 +52,7 @@ def test_reply_never_carries_a_citation_without_retrieval(
     confidently the model names one - the API does not read citations out of
     model output.
     """
-    stub_gateway(StubProvider("See SOP 4.2 on page 12."))
+    stub_gateway(StubProvider("See Scheme-I clause 4.2 on page 12."))
 
     body = client.post(
         "/api/chat",

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 100" role="img" aria-label="Manak Mitra">
+  <!-- Filled white: the light theme inverts it in CSS (see BrandMark.jsx). -->
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A seal: the round form of a certification mark. -->
+    <circle cx="50" cy="50" r="40" stroke-width="7"/>
+    <circle cx="50" cy="50" r="29" stroke-width="2.5" stroke-dasharray="3 5"/>
+    <!-- The tick: conformity. -->
+    <path d="M33 51 L45 63 L68 37" stroke-width="8"/>
+  </g>
+  <text x="108" y="66" fill="#fff" font-family="'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif"
+        font-size="46" font-weight="700" letter-spacing="-0.5">Manak Mitra</text>
+</svg>

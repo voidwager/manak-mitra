@@ -94,7 +94,7 @@ export const Header = () => {
             <Sparkles size={14} />
           </div>
           <div className="agent-pill-info">
-            <span className="agent-pill-title">{activeAgent?.name || 'SI-1'}</span>
+            <span className="agent-pill-title">{activeAgent?.name || 'Manak Mitra'}</span>
             {/*
               * The server derives this per request from whether a model is
               * configured and whether the agent's tools can run. It used to

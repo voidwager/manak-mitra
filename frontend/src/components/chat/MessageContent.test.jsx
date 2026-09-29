@@ -86,7 +86,7 @@ describe('MessageContent block structure', () => {
       <MessageContent
         text={
           '1. **Acceptable Limit**\nMust not exceed 2.5 mm/s RMS.\n\n' +
-          '2. **Action Above Limit**\nWithdraw the pump.'
+          '2. **Action Above Limit**\nStop selling the article.'
         }
       />,
     );
@@ -95,7 +95,7 @@ describe('MessageContent block structure', () => {
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
     expect(items[0].textContent).toContain('Must not exceed 2.5 mm/s RMS.');
-    expect(items[1].textContent).toContain('Withdraw the pump.');
+    expect(items[1].textContent).toContain('Stop selling the article.');
   });
 
   it('ends a list when ordinary prose follows a blank line', () => {

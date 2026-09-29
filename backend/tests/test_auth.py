@@ -293,7 +293,7 @@ def test_the_demo_password_default_holds_only_in_development(monkeypatch):
     """Outside development it must be set explicitly, or seeding refuses.
 
     The default is printed in the source and the seeded owner account has
-    full clearance, so a deployment seeded with it hands plant-administrator
+    full clearance, so a deployment seeded with it hands administrator
     access to anyone who finds the URL. Failing closed is the only safe
     behaviour: a deployment that will not seed is obvious, and one that
     seeds a published password is not.

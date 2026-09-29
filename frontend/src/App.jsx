@@ -27,7 +27,7 @@ const AppContent = () => {
     return (
       <div className="app-boot-screen">
         <div className="boot-spinner" />
-        <span>Connecting to the workbench...</span>
+        <span>Connecting to Manak Mitra...</span>
         <style>{`
           .app-boot-screen {
             display: flex;

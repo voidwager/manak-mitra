@@ -23,13 +23,13 @@ const PANELS = [
       'Needs the audit trail aggregated per user. The events are already being recorded; nothing reads them back yet.',
   },
   {
-    id: 'maintenance',
-    label: 'Company Maintenance',
+    id: 'demand',
+    label: 'Public Demand',
     icon: Wrench,
     blurb:
-      'Equipment history rolled up across units - recurring failures, overdue inspections, downtime by asset.',
+      'What the public asks about - top topics, languages, and questions the knowledge base could not answer, so gaps in published guidance show up.',
     needs:
-      'Needs structured maintenance records. The corpus currently holds these as documents rather than as rows, so there is nothing to total up.',
+      'Needs visitor questions aggregated by topic and language. Each turn is already audited; nothing rolls them up yet.',
   },
 ];
 
@@ -46,7 +46,7 @@ export const PerformancePage = () => {
       <div className="page-container animate-fade-in">
         <div className="perf-empty">
           <h2>Performance</h2>
-          <p>This section is available to plant administrators.</p>
+          <p>This section is available to helpdesk administrators.</p>
         </div>
         <style>{styles}</style>
       </div>

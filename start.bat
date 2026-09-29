@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM  SYNQ Workbench - start backend + frontend
+REM  Manak Mitra - start backend + frontend
 REM
 REM  Double-click this file, or run it from a terminal:
 REM      start.bat
@@ -19,7 +19,7 @@ set "ROOT=%CD%"
 set "PYTHON=%ROOT%\backend\.venv\Scripts\python.exe"
 
 echo.
-echo  SYNQ Workbench
+echo  Manak Mitra
 echo  =================
 echo.
 
@@ -62,10 +62,10 @@ call :killport 5173
 
 REM --- launch ---------------------------------------------------------------
 echo  Starting backend...
-start "SYNQ Backend" cmd /k "cd /d "%ROOT%\backend" && echo BACKEND  http://localhost:8000 && .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000"
+start "Manak Mitra Backend" cmd /k "cd /d "%ROOT%\backend" && echo BACKEND  http://localhost:8000 && .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000"
 
 echo  Starting frontend...
-start "SYNQ Frontend" cmd /k "cd /d "%ROOT%\frontend" && echo FRONTEND  http://localhost:5173 && npm run dev"
+start "Manak Mitra Frontend" cmd /k "cd /d "%ROOT%\frontend" && echo FRONTEND  http://localhost:5173 && npm run dev"
 
 REM --- wait for both to answer ----------------------------------------------
 echo.
@@ -90,12 +90,12 @@ echo.
 if "%BACKEND_UP%"=="1" (
     echo  [OK] backend    http://localhost:8000/docs
 ) else (
-    echo  [X]  backend did not start - check the "SYNQ Backend" window
+    echo  [X]  backend did not start - check the "Manak Mitra Backend" window
 )
 if "%FRONTEND_UP%"=="1" (
     echo  [OK] frontend   http://localhost:5173
 ) else (
-    echo  [X]  frontend did not start - check the "SYNQ Frontend" window
+    echo  [X]  frontend did not start - check the "Manak Mitra Frontend" window
 )
 
 echo.

@@ -133,7 +133,7 @@ On your machine, zip the project **excluding** those three, then on theirs:
 ```powershell
 git init
 git add .
-git commit -m "SYNQ Workbench"
+git commit -m "Manak Mitra"
 ```
 
 `.gitignore` already excludes `.venv`, `node_modules` and `.env`, so a clone
@@ -228,8 +228,8 @@ at fault:
 [  OK ] on main at 50b5d4c
 [  OK ] all current features are present in this checkout
 [  OK ] .env exists
-[ FAIL] SI-1 is missing
-        This database was seeded by an older version, before SI-1
+[ FAIL] The Manak Mitra agent (si-1) is missing
+        This database was seeded by an older version, before the universal agent
         existed. Re-seeding adds it and leaves your data alone.
 
   1 problem(s) found. Fix in this order:
@@ -246,7 +246,7 @@ Almost always one of two things, and the doctor tells you which:
 
 - **Their checkout predates the feature.** `git pull`, then `install.bat`.
 - **Their database was seeded by an older version.** The database is not in
-  git - each machine builds its own - so a clone made before SI-1 existed
+  git - each machine builds its own - so a clone made before the universal agent existed
   has a database without it. Re-run the seed:
 
   ```powershell
@@ -321,4 +321,4 @@ npm run lint
 npm run build
 ```
 
-Tests use a throwaway database — they never touch `data\synq_workbench.db`.
+Tests use a throwaway database — they never touch `data\manak_mitra.db`.

@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM  SYNQ Workbench - stop backend + frontend
+REM  Manak Mitra - stop backend + frontend
 REM
 REM  Kills whatever is listening on 8000 (API) and 5173 (frontend).
 REM  Safe to run when nothing is up.

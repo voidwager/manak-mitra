@@ -87,12 +87,18 @@ class Document(Base, TimestampMixin):
         worse than no label.
         """
         # Local import: app.services.access imports this module.
-        from app.services.access import PERSONAL_FOLDER, RESTRICTED_FOLDER
+        from app.services.access import (
+            PERSONAL_FOLDER,
+            PUBLIC_FOLDERS,
+            RESTRICTED_FOLDER,
+        )
 
         if self.folder == PERSONAL_FOLDER:
             return "personal"
         if self.folder == RESTRICTED_FOLDER:
             return "restricted"
+        if self.folder in PUBLIC_FOLDERS:
+            return "public"
         return "shared"
 
     # Where the bytes live on disk, relative to the configured upload dir.

@@ -1,6 +1,6 @@
 @echo off
 REM ===========================================================================
-REM  SYNQ Workbench - diagnose a machine where the app looks wrong
+REM  Manak Mitra - diagnose a machine where the app looks wrong
 REM
 REM  Double-click this file. It reports which of the four things that differ
 REM  between machines is at fault - the checkout, .env, the database, or the

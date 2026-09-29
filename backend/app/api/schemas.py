@@ -449,8 +449,9 @@ class DocumentOut(ApiModel):
     owner_id: str | None
     is_confidential_owner_only: bool
 
-    # "personal" | "restricted" | "shared", derived from the folder so the
-    # UI never has to reimplement the rule. The folder is authoritative.
+    # "personal" | "restricted" | "public" | "shared" (a staff desk), derived
+    # from the folder so the UI never has to reimplement the rule. The folder
+    # is authoritative.
     visibility: str = "shared"
 
     # Set when this document was attached to a chat rather than uploaded to

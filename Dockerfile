@@ -1,12 +1,12 @@
-# SYNQ Workbench - one image, one port, both halves.
+# Manak Mitra - one image, one port, both halves.
 #
 # The frontend is built here and served by the API process, which is why
 # there is a single service rather than two. Same origin means no CORS
 # allow-list to keep in step with a hostname somebody changes later, and one
 # container means one thing to deploy, scale and roll back.
 #
-#   docker build -t synq-workbench .
-#   docker run --rm -p 8000:8000 --env-file .env -v synq-data:/data synq-workbench
+#   docker build -t manak-mitra .
+#   docker run --rm -p 8000:8000 --env-file .env -v manak-data:/data manak-mitra
 #
 # The volume matters. Without it, uploaded documents and the SQLite database
 # live inside the container's writable layer and vanish on the next deploy -
@@ -59,7 +59,7 @@ COPY --from=frontend /build/dist ./frontend/dist
 # to survive one.
 ENV FRONTEND_DIST=/app/frontend/dist \
     UPLOAD_DIR=/data/documents \
-    SQLITE_FALLBACK_PATH=/data/synq_workbench.db \
+    SQLITE_FALLBACK_PATH=/data/manak_mitra.db \
     APP_ENV=production \
     DEBUG=false \
     PORT=8000

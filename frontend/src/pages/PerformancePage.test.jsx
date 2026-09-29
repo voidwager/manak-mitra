@@ -36,7 +36,7 @@ describe('PerformancePage', () => {
     render(<PerformancePage />);
 
     expect(screen.getByText('Employee Performance')).toBeInTheDocument();
-    expect(screen.getByText('Company Maintenance')).toBeInTheDocument();
+    expect(screen.getByText('Public Demand')).toBeInTheDocument();
 
     // One badge per panel. A shell that does not say it is a shell is worse
     // than no shell at all.
@@ -51,7 +51,7 @@ describe('PerformancePage', () => {
 
     // The other panel is gone: this replaces the view rather than expanding
     // beside it, which is what "opens in the big area" means.
-    expect(screen.queryByText('Company Maintenance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Public Demand')).not.toBeInTheDocument();
     expect(screen.getByText(/audit trail aggregated per user/i)).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('PerformancePage', () => {
     const user = userEvent.setup();
     render(<PerformancePage />);
 
-    await user.click(screen.getByText('Company Maintenance'));
+    await user.click(screen.getByText('Public Demand'));
     expect(screen.queryByText('Employee Performance')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /performance/i }));
@@ -71,6 +71,6 @@ describe('PerformancePage', () => {
     render(<PerformancePage />);
 
     expect(screen.queryByText('Employee Performance')).not.toBeInTheDocument();
-    expect(screen.getByText(/available to plant administrators/i)).toBeInTheDocument();
+    expect(screen.getByText(/available to helpdesk administrators/i)).toBeInTheDocument();
   });
 });

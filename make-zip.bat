@@ -1,8 +1,8 @@
 @echo off
 REM ===========================================================================
-REM  SYNQ Workbench - build a shareable zip
+REM  Manak Mitra - build a shareable zip
 REM
-REM  Creates synq-workbench.zip next to this folder, excluding everything that
+REM  Creates manak-mitra.zip next to this folder, excluding everything that
 REM  is machine-specific or regenerated:
 REM
 REM    backend\.venv          hard-codes this PC's Python path - breaks elsewhere
@@ -17,8 +17,8 @@ REM ===========================================================================
 setlocal
 cd /d "%~dp0"
 set "ROOT=%CD%"
-set "OUT=%ROOT%\..\synq-workbench.zip"
-set "STAGE=%TEMP%\synq-zip-stage"
+set "OUT=%ROOT%\..\manak-mitra.zip"
+set "STAGE=%TEMP%\manak-zip-stage"
 
 echo.
 echo  Building a shareable zip...

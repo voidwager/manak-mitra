@@ -27,7 +27,7 @@ from app.models.providers import (
     UnavailableProvider,
 )
 
-MESSAGES = [ChatMessage(role="user", content="What is a centrifugal pump?")]
+MESSAGES = [ChatMessage(role="user", content="What is an ISI mark?")]
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ def test_successful_completion_is_parsed(monkeypatch):
             json={
                 "model": "test-model",
                 "choices": [
-                    {"message": {"content": "A pump moves fluid."}, "finish_reason": "stop"}
+                    {"message": {"content": "The ISI mark shows conformity to an Indian Standard."}, "finish_reason": "stop"}
                 ],
                 "usage": {"prompt_tokens": 11, "completion_tokens": 5},
             },
@@ -141,7 +141,7 @@ def test_successful_completion_is_parsed(monkeypatch):
     provider = _patched(monkeypatch, handler)
     result = provider.complete(MESSAGES)
 
-    assert result.text == "A pump moves fluid."
+    assert result.text == "The ISI mark shows conformity to an Indian Standard."
     assert result.finish_reason == "stop"
     assert result.usage.total_tokens == 16
 

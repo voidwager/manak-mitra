@@ -52,10 +52,10 @@ _TOOL_STEP = re.compile(r"^Tool:\s*([a-z0-9_]+)\s*\(", re.IGNORECASE)
 MIN_REPORTABLE_CHARS = 200
 
 _DRAFT_INSTRUCTION = (
-    "You are preparing a structured inspection report from an answer that has "
+    "You are preparing a structured compliance summary from an answer that has "
     "already been given. Call generate_report exactly once.\n\n"
     "Use only what the answer below states. Do not add findings it does not "
-    "contain, do not invent equipment readings, tag numbers, dates or risk "
+    "contain, do not invent IS numbers, fees, timelines, dates or risk "
     "ratings, and do not soften or strengthen a limit. If the answer cites "
     "passages with bracketed numbers, keep those markers on the findings they "
     "belong to. Recommendations are optional - include them only where the "
@@ -203,7 +203,7 @@ def generate_for_message(
 
     result = ReportGeneratorTool().run(
         context,
-        title=drafted.get("title") or (question[:80] or "Inspection report"),
+        title=drafted.get("title") or (question[:80] or "Compliance summary"),
         summary=drafted.get("summary") or "",
         findings=drafted.get("findings") or [],
         recommendations=drafted.get("recommendations") or [],

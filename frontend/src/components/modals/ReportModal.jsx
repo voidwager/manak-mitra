@@ -130,11 +130,11 @@ export const ReportModal = ({ reportData, onClose }) => {
             <div className="report-banner">
               <div className="company-info">
                 <h4 className="comp-name">
-                  Sovereign On-Premise Industrial AI Workbench — Automated Audit
+                  Manak Mitra — Indian Standards Help Desk Summary
                 </h4>
                 <p className="comp-sub">
-                  Demonstration system on synthetic data. Not an approved plant
-                  document.
+                  Compiled from public BIS sources. Information, not a BIS
+                  decision; confirm current rules on bis.gov.in.
                 </p>
               </div>
               <div className={`risk-pill ${onPremise ? 'onprem' : 'external'}`}>

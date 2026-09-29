@@ -1,17 +1,14 @@
-# Static assets
+# public/
 
-Served from the site root: `public/synq-logo.svg` is fetched as
-`/synq-logo.svg`, and is copied into the image by the frontend build stage.
+Served from the site root: `public/manak-mitra-logo.svg` is fetched as
+`/manak-mitra-logo.svg`, and is copied into the image by the frontend build stage.
 
-## synq-logo.svg (or .png)
+## manak-mitra-logo.svg
 
-The SYNQ wordmark shown at the top of the sidebar.
+The Manak Mitra mark shown at the top of the sidebar: a seal with a tick,
+beside the name. Filled white; the light theme inverts it in CSS
+(`src/components/layout/BrandMark.jsx`).
 
-The sidebar tries `.svg` first and falls back to `.png`, so either format
-works — save it under one of those two names and nothing else needs to
-change. If neither file is present the sidebar renders the word "SYNQ"
-instead, because a brand that appears as a broken-image icon is worse than
-one rendered as text.
-
-The mark is white, so it is inverted automatically under the light theme
-rather than kept as a second file that has to stay in step with the first.
+If the file is missing, the sidebar draws the same mark inline
+(`src/components/layout/Wordmark.jsx`), so a bad checkout never shows a
+broken-image icon.

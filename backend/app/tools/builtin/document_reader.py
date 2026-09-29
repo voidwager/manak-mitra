@@ -44,7 +44,7 @@ class DocumentReaderTool(Tool):
                     "type": "string",
                     "description": (
                         "The document's name, as exactly as you know it "
-                        "(for example 'Centrifugal Pump Inspection SOP.pdf')."
+                        "(for example 'Compulsory Registration Scheme (CRS).md')."
                     ),
                 },
                 "part": {

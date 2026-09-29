@@ -67,7 +67,7 @@ from app.services.agents import effective_folder_scope, retrieval_is_enabled
 from app.services import dispatch as specialist_dispatch
 from app.tools import ToolCall, ToolContext, ToolResult, parse_arguments
 from app.tools import registry as tool_registry
-from app.services.prompts import build_system_prompt
+from app.services.prompts import ASSISTANT_NAME, build_system_prompt
 from app.services.vision import (
     describe_for_prompt,
     reconcile_with_retrieval,
@@ -900,7 +900,7 @@ def _dispatch_trace(turn: "Turn | None") -> list[dict]:
         return []
     return [
         {
-            "label": f"SI-1: {dispatch.reason}",
+            "label": f"{ASSISTANT_NAME}: {dispatch.reason}",
             "status": "done" if dispatch.dispatched else "skipped",
         }
     ]

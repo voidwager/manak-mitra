@@ -117,7 +117,7 @@ def test_a_wrong_password_is_refused(client):
 def test_an_unknown_account_and_a_wrong_password_are_indistinguishable(client):
     """Telling them apart lets anyone enumerate who has an account.
 
-    On a plant system that is a staff list, so both paths return the same
+    An account list is a staff list, so both paths return the same
     status and the same words.
     """
     from tests.conftest import DEMO_PASSWORD
@@ -156,7 +156,7 @@ def test_list_agents_returns_camel_case(client, owner_headers):
 
     assert len(agents) >= 3
     assert "isSystem" in agents[0]
-    assert {a["id"] for a in agents} >= {"maint-intel", "sop-assistant", "doc-vision"}
+    assert {a["id"] for a in agents} >= {"certification-guide", "lab-locator", "doc-vision"}
 
 
 def test_create_agent_persists_and_links_tools(client, owner_headers):
@@ -164,8 +164,8 @@ def test_create_agent_persists_and_links_tools(client, owner_headers):
         "/api/agents",
         headers=owner_headers,
         json={
-            "name": "Heat Exchanger Diagnostics",
-            "description": "Shell-and-tube fouling analysis.",
+            "name": "Licence Fee Checker",
+            "description": "Marking fee and licence fee checks.",
             "tools": ["Document Search", "Calculator"],
         },
     )
@@ -175,7 +175,7 @@ def test_create_agent_persists_and_links_tools(client, owner_headers):
 
     fetched = client.get(f"/api/agents/{created['id']}", headers=owner_headers)
     assert fetched.status_code == 200
-    assert fetched.json()["name"] == "Heat Exchanger Diagnostics"
+    assert fetched.json()["name"] == "Licence Fee Checker"
 
 
 # ------------------------------------------------------------- documents
@@ -191,7 +191,7 @@ def test_seeded_documents_are_genuinely_indexed(client, owner_headers):
     docs = {d["id"]: d for d in client.get("/api/documents", headers=owner_headers).json()}
 
     assert docs, "expected seeded documents"
-    for doc_id in ("doc-1", "doc-2", "doc-3", "doc-4", "doc-5"):
+    for doc_id in ("bis-01", "bis-09", "bis-19", "int-cert", "int-hallmark", "int-analytics"):
         doc = docs[doc_id]
         assert doc["status"] == "Indexed", f"{doc_id} is {doc['status']}"
         assert doc["chunks"] > 0
@@ -228,7 +228,7 @@ def test_indexing_a_document_with_no_stored_file_is_refused(
             id="doc-catalogue-only",
             name="Never Uploaded.pdf",
             type="PDF",
-            folder="All Units",
+            folder="Certification Desk",
             owner_id="user-sanyam",
             storage_path=None,
         )
@@ -255,15 +255,22 @@ def test_document_scope_is_enforced_server_side(
 
     # The confidential document reaches the owner only - it is never sent to
     # the other clients at all, not merely hidden by them.
-    assert "doc-5" in owner_ids
-    assert "doc-5" not in engineer_ids
-    assert "doc-5" not in safety_ids
+    assert "int-analytics" in owner_ids
+    assert "int-analytics" not in engineer_ids
+    assert "int-analytics" not in safety_ids
 
-    # Folder scoping.
-    assert engineer_ids >= {"doc-1", "doc-2", "doc-4"}   # CDU-II
-    assert "doc-3" not in engineer_ids                    # Safety folder
-    assert "doc-3" in safety_ids
-    assert not safety_ids & {"doc-1", "doc-2", "doc-4"}   # CDU-II is not theirs
+    # Published BIS material is everyone's.
+    public_ids = {f"bis-{n:02d}" for n in range(1, 20)}
+    assert public_ids <= owner_ids
+    assert public_ids <= engineer_ids
+    assert public_ids <= safety_ids
+
+    # Desk folders stay scoped to their staff.
+    assert "int-cert" in engineer_ids                     # Certification Desk
+    assert "int-hallmark" not in engineer_ids             # Hallmarking Desk
+    assert "int-hallmark" in safety_ids
+    assert "int-cert" not in safety_ids                   # Certification Desk is not theirs
+    assert {"int-cert", "int-hallmark"} <= owner_ids
 
 
 def test_personal_uploads_are_not_shared_between_users(
@@ -294,7 +301,7 @@ def test_personal_uploads_are_not_shared_between_users(
 
 
 def test_direct_fetch_of_out_of_scope_document_is_denied(client, engineer_headers):
-    response = client.get("/api/documents/doc-5", headers=engineer_headers)
+    response = client.get("/api/documents/int-analytics", headers=engineer_headers)
     # 404 rather than 403: a 403 would confirm the document exists.
     assert response.status_code == 404
 
@@ -329,10 +336,10 @@ def test_uploaded_text_is_indexed_and_becomes_searchable(client, engineer_header
         headers=engineer_headers,
         files={
             "file": (
-                "pump-note.txt",
+                "licence-note.txt",
                 io.BytesIO(
-                    b"Pump P-991 vibration tolerance is 2.5 mm/s RMS.\n"
-                    b"Bearing housing oil must be checked every 500 hours."
+                    b"Licence L-991 marking fee tolerance is 2.5 percent.\n"
+                    b"Factory records must be checked every 500 units."
                 ),
                 "text/plain",
             )
@@ -346,14 +353,14 @@ def test_uploaded_text_is_indexed_and_becomes_searchable(client, engineer_header
     assert doc["chunks"] >= 1
     assert doc["indexError"] == ""
     # The excerpt is now real extracted text, not an authored placeholder.
-    assert "P-991" in doc["excerpt"]
+    assert "L-991" in doc["excerpt"]
     # No embedder is configured, so this must not claim to be semantic.
     assert doc["isSemanticallyIndexed"] is False
 
     hits = client.post(
         "/api/search",
         headers=engineer_headers,
-        json={"query": "P-991 vibration tolerance"},
+        json={"query": "L-991 marking fee tolerance"},
     ).json()
     assert hits["mode"] == "lexical"
     assert any(h["documentId"] == uploaded["id"] for h in hits["results"])
@@ -419,17 +426,17 @@ def test_toggle_tool_flips_state(client, owner_headers):
 # --------------------------------------------------------- conversations
 def test_conversations_are_scoped_to_their_owner(client, owner_headers, safety_headers):
     owner_convs = client.get("/api/conversations", headers=owner_headers).json()
-    assert any(c["id"] == "conv-demo-p204" for c in owner_convs)
+    assert any(c["id"] == "conv-demo-huid" for c in owner_convs)
 
     other_convs = client.get("/api/conversations", headers=safety_headers).json()
-    assert all(c["id"] != "conv-demo-p204" for c in other_convs)
+    assert all(c["id"] != "conv-demo-huid" for c in other_convs)
 
     # And it cannot be fetched directly either.
-    assert client.get("/api/conversations/conv-demo-p204", headers=safety_headers).status_code == 404
+    assert client.get("/api/conversations/conv-demo-huid", headers=safety_headers).status_code == 404
 
 
 def test_seeded_demo_answer_is_labelled_as_seeded(client, owner_headers):
-    conv = client.get("/api/conversations/conv-demo-p204", headers=owner_headers).json()
+    conv = client.get("/api/conversations/conv-demo-huid", headers=owner_headers).json()
     assistant = next(m for m in conv["messages"] if m["sender"] == "assistant")
 
     labels = [step["label"] for step in assistant["activityTrace"]]
@@ -469,7 +476,7 @@ def test_conversations_can_be_pinned_and_sort_first(client, owner_headers):
 
 def test_pinning_someone_elses_conversation_is_denied(client, safety_headers):
     response = client.patch(
-        "/api/conversations/conv-demo-p204", headers=safety_headers, json={"pinned": True}
+        "/api/conversations/conv-demo-huid", headers=safety_headers, json={"pinned": True}
     )
     assert response.status_code == 404
 
@@ -492,12 +499,12 @@ def test_deleting_someone_elses_conversation_is_denied(
     client, owner_headers, safety_headers
 ):
     response = client.delete(
-        "/api/conversations/conv-demo-p204", headers=safety_headers
+        "/api/conversations/conv-demo-huid", headers=safety_headers
     )
     assert response.status_code == 404
     # And it still exists for its owner.
     assert client.get(
-        "/api/conversations/conv-demo-p204", headers=owner_headers
+        "/api/conversations/conv-demo-huid", headers=owner_headers
     ).status_code == 200
 
 
@@ -512,7 +519,7 @@ def test_chat_without_a_provider_fails_loudly(client, safety_headers):
     response = client.post(
         "/api/chat",
         headers=safety_headers,
-        json={"message": "What PPE is required in CDU-II?", "agentId": "sop-assistant"},
+        json={"message": "How do I verify a HUID on gold jewellery?", "agentId": "hallmark-helper"},
     )
     assert response.status_code == 503
 
@@ -524,7 +531,7 @@ def test_chat_without_a_provider_fails_loudly(client, safety_headers):
         f"/api/conversations/{detail['conversationId']}", headers=safety_headers
     ).json()
     assert conv["messages"][-1]["sender"] == "user"
-    assert conv["messages"][-1]["text"] == "What PPE is required in CDU-II?"
+    assert conv["messages"][-1]["text"] == "How do I verify a HUID on gold jewellery?"
     # No assistant turn was invented.
     assert all(m["sender"] == "user" for m in conv["messages"])
 
@@ -672,7 +679,7 @@ def test_normalising_leaves_everything_else_alone():
     already = "postgresql+psycopg://u:p@host/wb"
     assert _normalise_db_url(already) == already
 
-    sqlite = "sqlite:////data/synq_workbench.db"
+    sqlite = "sqlite:////data/helpdesk.db"
     assert _normalise_db_url(sqlite) == sqlite
 
     assert _normalise_db_url("") == ""

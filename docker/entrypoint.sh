@@ -20,7 +20,7 @@ cd /app
 # arrives empty. Recreating the upload directory here rather than relying on
 # the Dockerfile's mkdir means the first boot after a disk is attached works
 # the same as one without.
-DATA_DIR="$(dirname "${SQLITE_FALLBACK_PATH:-/data/synq_workbench.db}")"
+DATA_DIR="$(dirname "${SQLITE_FALLBACK_PATH:-/data/manak_mitra.db}")"
 mkdir -p "${UPLOAD_DIR:-/data/documents}" "$DATA_DIR" 2>/dev/null || true
 
 if [ ! -w "$DATA_DIR" ]; then

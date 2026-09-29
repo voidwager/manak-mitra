@@ -22,7 +22,7 @@ from app.services import auth
 
 DbSession = Annotated[Session, Depends(get_db)]
 
-UNAUTHENTICATED = "Not signed in. Sign in to the workbench first."
+UNAUTHENTICATED = "Not signed in. Open the helpdesk again to start a session."
 EXPIRED = "Your session is no longer valid. Sign in again."
 
 

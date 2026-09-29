@@ -22,7 +22,7 @@ export const HistoryPage = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Conversation History</h1>
-          <p className="page-subtitle">Previous industrial diagnostic sessions, SOP lookups, and equipment audits.</p>
+          <p className="page-subtitle">Your previous questions and the sources they were answered from.</p>
         </div>
         <button className="primary-btn" onClick={handleNewChat}>
           <span>+ New Conversation</span>
@@ -76,7 +76,7 @@ export const HistoryPage = () => {
                   </p>
 
                   <div className="history-meta-row">
-                    <span className="agent-badge">{conv.agentName || 'Maintenance Assistant'}</span>
+                    <span className="agent-badge">{conv.agentName || 'Manak Mitra'}</span>
                     <span className="msg-count">{msgCount} message{msgCount !== 1 ? 's' : ''}</span>
                   </div>
                 </div>

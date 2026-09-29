@@ -72,7 +72,7 @@ export const CreateAgentModal = ({ onClose }) => {
             </div>
             <div>
               <h3 className="modal-title">Create Autonomous Agent</h3>
-              <p className="modal-sub">Build a new sovereign AI agent tuned for specific industrial tasks.</p>
+              <p className="modal-sub">Build a new specialist that searches a chosen part of the BIS knowledge base.</p>
             </div>
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -121,7 +121,7 @@ export const CreateAgentModal = ({ onClose }) => {
             >
               <option value="">
                 {inference?.configured
-                  ? `Follow the workbench (${inference.model})`
+                  ? `Follow the server default (${inference.model})`
                   : 'No model configured'}
               </option>
               {selectableModels.map((m) => (
@@ -133,17 +133,17 @@ export const CreateAgentModal = ({ onClose }) => {
             <div className="agent-model-note">
               {inference?.configured
                 ? model
-                  ? 'Pinned. This agent keeps this model even if the workbench changes.'
-                  : "Recommended. The agent uses whichever model the workbench routes its turns to."
+                  ? 'Pinned. This agent keeps this model even if the server default changes.'
+                  : "Recommended. The agent uses whichever model the server routes its turns to."
                 : 'Connect a provider before this agent can answer.'}
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">System Instructions & SOP Alignment</label>
+            <label className="form-label">Instructions</label>
             <textarea 
               className="form-textarea"
-              placeholder="You are an expert industrial thermal engineer. Always verify against the plant's approved standards..."
+              placeholder="You help MSMEs with CRS registration. Always cite the scheme document and list the documents they must prepare..."
               rows={3}
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}

@@ -150,7 +150,7 @@ export const AgentSettingsModal = ({ agent, onClose }) => {
               <Cpu size={13} /> Pinned model
             </span>
             <select value={modelPin} onChange={(e) => setModelPin(e.target.value)}>
-              <option value="">Follow the workbench (recommended)</option>
+              <option value="">Follow the server default (recommended)</option>
               {(modelCatalogue?.selectable ?? []).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label} - {m.provider}
@@ -159,7 +159,7 @@ export const AgentSettingsModal = ({ agent, onClose }) => {
             </select>
             <span className="field-hint">
               {modelPin
-                ? 'Pinned. This agent keeps this model even when the workbench routes elsewhere.'
+                ? 'Pinned. This agent keeps this model even when the server routes elsewhere.'
                 : 'Unpinned. The agent follows the role above, so changing .env moves it with everything else.'}
             </span>
           </label>

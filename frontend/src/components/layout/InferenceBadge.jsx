@@ -83,7 +83,7 @@ export const InferenceBadge = () => {
               ? 'Prototype inference. Prompts leave your network, so this is not sovereign yet. Switching to a local runtime is a configuration change.'
               : inference.onPremise
                 ? 'Inference runs inside your own infrastructure. No prompt leaves the network.'
-                : 'No inference provider is configured, so the workbench cannot answer questions yet.'}
+                : 'No inference provider is configured, so the assistant cannot answer questions yet.'}
           </p>
 
           {missing.length > 0 && (

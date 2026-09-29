@@ -320,7 +320,7 @@ TOOLS = [
 HUID_EXCERPT = (
     "BIS CARE- The Official mobile application of BIS now has the provision "
     "for the common consumers to verify the authenticity of Hallmarked gold "
-    "jewellery items bearing a HUID number. The “Verify HUID” "
+    "jewellery items bearing a HUID number. The â€œVerify HUIDâ€ "
     "feature can be utilised to verify the purity of the jewellery articles "
     "before purchase."
 )
@@ -651,7 +651,10 @@ def _seed_documents(db: Session) -> None:
             document = Document(
                 status=DocumentStatus.READY,
                 chunk_count=0,
-                uploaded_date=today - timedelta(days=offset * 3),
+                # The day it was loaded. Staggered dates would claim a
+                # history of uploads that never happened; when each source
+                # was captured from bis.gov.in is in the file's own header.
+                uploaded_date=today,
                 storage_path=None,
                 size="",
                 size_bytes=0,
@@ -723,7 +726,7 @@ def _seed_conversations(db: Session) -> None:
             position=2,
             source={
                 "title": "Hallmarking for Consumers - HUID, Testing, Compensation.md",
-                "page": "Page 1 · Hallmarking - Consumer Protection",
+                "page": "Page 1 Â· Hallmarking - Consumer Protection",
                 "section": "Hallmarking - Consumer Protection",
                 "excerpt": HUID_EXCERPT,
             },
@@ -763,4 +766,4 @@ def seed(db: Session) -> None:
     _seed_conversations(db)
     _seed_notifications(db)
     db.commit()
-    log.info("Seed complete (synthetic demo dataset)")
+    log.info("Seed complete (BIS helpdesk dataset)")

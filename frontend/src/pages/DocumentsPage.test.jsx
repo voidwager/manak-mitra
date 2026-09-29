@@ -5,7 +5,7 @@
  * text" and "Indexing failed" all mean the document is not searchable, but
  * only one is worth retrying and only one is the user's to fix - collapsing
  * them into a single grey badge is how someone ends up wondering why the
- * assistant cannot find their SOP.
+ * assistant cannot find their guide.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -38,11 +38,11 @@ const { DocumentsPage } = await import('./DocumentsPage');
 
 const base = {
   id: 'doc-1',
-  name: 'Centrifugal Pump Inspection SOP.pdf',
+  name: 'Scheme-I (ISI Mark) Product Certification.md',
   type: 'PDF',
   size: '8.8 KB',
   date: '2026-09-01',
-  folder: 'CDU-II',
+  folder: 'Certification Desk',
   ownerId: 'user-sanyam',
   isConfidentialOwnerOnly: false,
   section: '4.2',
@@ -122,7 +122,7 @@ describe('DocumentsPage indexing states', () => {
 
   it('marks a restricted document as owner-clearance only', () => {
     context.documents = [
-      { ...base, folder: 'Executive Confidential', visibility: 'restricted' },
+      { ...base, folder: 'BIS Internal', visibility: 'restricted' },
     ];
     render(<DocumentsPage />);
 
@@ -151,11 +151,12 @@ describe('DocumentsPage indexing states', () => {
     expect(screen.queryByText('My files')).not.toBeInTheDocument();
   });
 
-  it('splits documents into Private and Public, Private first', () => {
+  it('splits documents by audience: private, public sources, staff desks', () => {
     context.documents = [
-      { ...base, id: 'a', name: 'Shared SOP.pdf', folder: 'CDU-II', visibility: 'shared' },
-      { ...base, id: 'b', name: 'Audit.pdf', folder: 'Executive Confidential', visibility: 'restricted' },
+      { ...base, id: 'a', name: 'Shared Guide.md', folder: 'Certification Desk', visibility: 'shared' },
+      { ...base, id: 'b', name: 'Audit.pdf', folder: 'BIS Internal', visibility: 'restricted' },
       { ...base, id: 'c', name: 'My notes.pdf', folder: 'Personal Uploads', visibility: 'personal' },
+      { ...base, id: 'd', name: 'CRS Guide.md', folder: 'Certification Schemes', visibility: 'public' },
     ];
     render(<DocumentsPage />);
 
@@ -164,19 +165,23 @@ describe('DocumentsPage indexing states', () => {
       .filter((row) => row.className.includes('scope-section-row'))
       .map((row) => row.textContent);
 
-    expect(sections).toHaveLength(2);
+    // A desk folder must not be listed as public: visitors never see it,
+    // and a page that says otherwise misstates who can read the file.
+    expect(sections).toHaveLength(3);
     expect(sections[0]).toContain('Private');
-    expect(sections[1]).toContain('Public');
+    expect(sections[1]).toContain('Public BIS sources');
+    expect(sections[2]).toContain('Staff desks');
+    expect(screen.getByText('CRS Guide.md')).toBeInTheDocument();
 
     // Private holds both the personal file and the restricted one; they are
     // separate scopes under one heading, not one merged permission.
     expect(screen.getByText('My files')).toBeInTheDocument();
     expect(screen.getByText('Confidential')).toBeInTheDocument();
-    expect(screen.getByText('CDU-II')).toBeInTheDocument();
+    expect(screen.getByText('Certification Desk')).toBeInTheDocument();
 
     // Every document is still listed.
     expect(screen.getByText('My notes.pdf')).toBeInTheDocument();
-    expect(screen.getByText('Shared SOP.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Shared Guide.md')).toBeInTheDocument();
     expect(screen.getByText('Audit.pdf')).toBeInTheDocument();
   });
 

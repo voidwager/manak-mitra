@@ -51,7 +51,7 @@ def run(*args: str) -> str:
 
 # ---------------------------------------------------------------------------
 print()
-print("  SYNQ Workbench - doctor")
+print("  Manak Mitra - doctor")
 print("  ==========================")
 print(f"  repo: {REPO_ROOT}")
 print()
@@ -70,7 +70,7 @@ else:
 # from before a feature landed. Check for the files rather than the commit,
 # because a ZIP download has no history to compare against.
 MARKERS = {
-    "SI-1 specialist routing": REPO_ROOT / "backend/app/services/dispatch.py",
+    "Specialist routing (si-1)": REPO_ROOT / "backend/app/services/dispatch.py",
     "multi-provider registry": REPO_ROOT / "backend/app/models/registry.py",
     "Gemini provider": REPO_ROOT / "backend/app/models/providers/gemini.py",
     "per-chat model menu": REPO_ROOT / "frontend/src/components/chat/ChatSettingsMenu.jsx",
@@ -193,12 +193,12 @@ if url.startswith("sqlite:///"):
                 else:
                     report(OK, f"{len(agents)} agent(s), {users} user(s), {docs} document(s)")
                     for agent_id, name, status, universal in agents:
-                        tag = "  <- SI-1, the universal assistant" if universal else ""
+                        tag = "  <- Manak Mitra, the universal assistant" if universal else ""
                         print(f"        {name} ({agent_id}, {status}){tag}")
 
                     if not any(u for _, _, _, u in agents):
                         fail(
-                            "SI-1 is missing",
+                            "The Manak Mitra agent (si-1) is missing",
                             "This database was seeded by an older version, before SI-1\n"
                             "existed. Re-seeding adds it and leaves your data alone.",
                             r"backend\.venv\Scripts\python.exe scripts\seed_db.py",

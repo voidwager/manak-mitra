@@ -26,28 +26,28 @@ from app.rag.retriever import build_context_block
 from app.rag.store import cosine_similarity
 from tests.conftest import StubProvider
 
-SOP_TEXT = (
-    b"Centrifugal Pump Inspection SOP\n"
+GUIDE_TEXT = (
+    b"Hallmarking Centre Inspection Guide\n"
     b"\n"
-    b"Section 4.2 Vibration limits\n"
+    b"Section 4.2 Purity limits\n"
     b"\n"
-    b"Pump P-7781 must be isolated with electrical lock-out tag-out before any\n"
-    b"inspection begins. Acceptable vibration tolerance is 2.5 mm/s RMS measured\n"
-    b"at the bearing housing. Operating temperature limit is 75 degrees Celsius.\n"
+    b"Centre HC-7781 must be verified with a licence check before any\n"
+    b"inspection begins. Acceptable purity tolerance is 2.5 percent measured\n"
+    b"at the assay bench. Operating temperature limit is 75 degrees Celsius.\n"
     b"\n"
-    b"Section 4.3 Seal flush\n"
+    b"Section 4.3 Fee remittance\n"
     b"\n"
-    b"Verify the mechanical seal flush line is clear and that plan 11 flush flow\n"
-    b"is established before restart. Record the reading in the maintenance log.\n"
+    b"Verify the testing fee receipt line is clear and that plan 11 remittance\n"
+    b"is established before restart. Record the reading in the audit log.\n"
 )
 
-COMPRESSOR_TEXT = (
-    b"Reciprocating Compressor Manual\n"
+LAB_TEXT = (
+    b"Laboratory Recognition Manual\n"
     b"\n"
-    b"Section 2.1 Suction filters\n"
+    b"Section 2.1 Proficiency samples\n"
     b"\n"
-    b"Compressor K-3312 requires suction filter differential pressure\n"
-    b"verification at every shutdown. Replace the element above 0.35 bar.\n"
+    b"Laboratory LB-3312 requires proficiency sample verification at every\n"
+    b"audit. Replace the reference sample above 0.35 percent drift.\n"
 )
 
 
@@ -81,7 +81,7 @@ class StubEmbedder(EmbeddingProvider):
     configured = True
     on_premise = True
 
-    VOCAB = ["vibration", "seal", "compressor", "filter", "pump", "temperature"]
+    VOCAB = ["purity", "fee", "laboratory", "sample", "centre", "temperature"]
 
     def __init__(self, *, error: Exception | None = None):
         super().__init__(model="stub-embed")
@@ -133,11 +133,11 @@ def test_retrieval_never_crosses_a_document_scope_boundary(
 ):
     """A passage must not reach a user who cannot open its document."""
     private = _upload(
-        client, engineer_headers, "engineer-only.txt", b"Turbine T-4409 trip setpoint is 3600 rpm."
+        client, engineer_headers, "engineer-only.txt", b"Licence L-4409 renewal fee is 3600 rupees."
     )
     assert private["status"] == "Indexed"
 
-    # The safety user cannot see the document...
+    # The hallmarking user cannot see the document...
     assert (
         client.get(f"/api/documents/{private['id']}", headers=safety_headers).status_code
         == 404
@@ -147,17 +147,17 @@ def test_retrieval_never_crosses_a_document_scope_boundary(
     hits = client.post(
         "/api/search",
         headers=safety_headers,
-        json={"query": "Turbine T-4409 trip setpoint"},
+        json={"query": "Licence L-4409 renewal fee"},
     ).json()
     assert all(h["documentId"] != private["id"] for h in hits["results"])
-    assert all("T-4409" not in h["text"] for h in hits["results"])
+    assert all("L-4409" not in h["text"] for h in hits["results"])
 
     # The owner of the document does get it back, so the query itself is
     # not the reason the other user found nothing.
     own = client.post(
         "/api/search",
         headers=engineer_headers,
-        json={"query": "Turbine T-4409 trip setpoint"},
+        json={"query": "Licence L-4409 renewal fee"},
     ).json()
     assert any(h["documentId"] == private["id"] for h in own["results"])
 
@@ -174,7 +174,7 @@ def test_confidential_document_content_is_not_retrievable_by_non_owner(
     from app.database.models import Document
 
     doc = _upload(
-        client, owner_headers, "board-audit.txt", b"Hydrocracker HCU-9 efficiency is 98.4 percent."
+        client, owner_headers, "board-audit.txt", b"Helpdesk HD-9 resolution rate is 98.4 percent."
     )
 
     row = db_session.get(Document, doc["id"])
@@ -184,31 +184,31 @@ def test_confidential_document_content_is_not_retrievable_by_non_owner(
     hits = client.post(
         "/api/search",
         headers=engineer_headers,
-        json={"query": "Hydrocracker HCU-9 efficiency"},
+        json={"query": "Helpdesk HD-9 resolution rate"},
     ).json()
     assert all(h["documentId"] != doc["id"] for h in hits["results"])
 
     owner_hits = client.post(
-        "/api/search", headers=owner_headers, json={"query": "Hydrocracker HCU-9 efficiency"}
+        "/api/search", headers=owner_headers, json={"query": "Helpdesk HD-9 resolution rate"}
     ).json()
     assert any(h["documentId"] == doc["id"] for h in owner_hits["results"])
 
 
 def test_deleting_a_document_removes_it_from_retrieval(client, engineer_headers):
     doc = _upload(
-        client, engineer_headers, "transient.txt", b"Valve V-6620 must be gagged during the test."
+        client, engineer_headers, "transient.txt", b"Complaint C-6620 must be escalated during the audit."
     )
     assert doc["chunks"] >= 1
 
     before = client.post(
-        "/api/search", headers=engineer_headers, json={"query": "Valve V-6620 gagged"}
+        "/api/search", headers=engineer_headers, json={"query": "Complaint C-6620 escalated"}
     ).json()
     assert any(h["documentId"] == doc["id"] for h in before["results"])
 
     client.delete(f"/api/documents/{doc['id']}", headers=engineer_headers)
 
     after = client.post(
-        "/api/search", headers=engineer_headers, json={"query": "Valve V-6620 gagged"}
+        "/api/search", headers=engineer_headers, json={"query": "Complaint C-6620 escalated"}
     ).json()
     assert all(h["documentId"] != doc["id"] for h in after["results"])
 
@@ -219,13 +219,13 @@ def test_deleting_a_document_removes_it_from_retrieval(client, engineer_headers)
 def test_grounded_reply_cites_only_retrieved_documents(
     client, owner_headers, stub_gateway
 ):
-    doc = _upload(client, owner_headers, "pump-sop.txt", SOP_TEXT)
-    stub = stub_gateway(StubProvider("Isolate the pump first [1]."))
+    doc = _upload(client, owner_headers, "hallmark-guide.txt", GUIDE_TEXT)
+    stub = stub_gateway(StubProvider("Verify the licence first [1]."))
 
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "What is the vibration tolerance for pump P-7781?"},
+        json={"message": "What is the purity tolerance for centre HC-7781?"},
     ).json()
 
     assert body["retrievalMode"] in ("lexical", "hybrid")
@@ -233,9 +233,9 @@ def test_grounded_reply_cites_only_retrieved_documents(
     source = body["assistantMessage"]["source"]
     assert source is not None
     assert source["documentId"] == doc["id"]
-    assert source["title"] == "pump-sop.txt"
+    assert source["title"] == "hallmark-guide.txt"
     # The citation quotes retrieved text, so it is checkable.
-    assert "2.5 mm/s" in source["excerpt"]
+    assert "2.5 percent" in source["excerpt"]
 
     # Every cited document is one this user can actually open, and the
     # document we uploaded is among them. (Other tests upload documents with
@@ -252,7 +252,7 @@ def test_grounded_reply_cites_only_retrieved_documents(
     # The prompt carried the passages and the narrowed guardrail.
     system = stub.last_prompt[0].content
     assert "CONTEXT" in system
-    assert "2.5 mm/s" in system
+    assert "2.5 percent" in system
     assert "NEVER cite a document" in system
 
 
@@ -260,13 +260,13 @@ def test_grounded_guardrail_replaces_the_no_retrieval_one(
     client, owner_headers, stub_gateway
 ):
     """The prohibition narrows; it never disappears."""
-    _upload(client, owner_headers, "compressor.txt", COMPRESSOR_TEXT)
+    _upload(client, owner_headers, "lab-manual.txt", LAB_TEXT)
     stub = stub_gateway(StubProvider())
 
     client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "suction filter differential pressure on compressor K-3312"},
+        json={"message": "proficiency sample verification for laboratory LB-3312"},
     )
     grounded = stub.last_prompt[0].content
     assert "NO access to any document" not in grounded
@@ -281,13 +281,13 @@ def test_grounded_guardrail_replaces_the_no_retrieval_one(
 
 
 def test_activity_trace_reports_the_real_retrieval(client, owner_headers, stub_gateway):
-    _upload(client, owner_headers, "seal-flush.txt", SOP_TEXT)
+    _upload(client, owner_headers, "fee-receipt.txt", GUIDE_TEXT)
     stub_gateway(StubProvider())
 
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "mechanical seal flush plan 11"},
+        json={"message": "testing fee receipt remittance plan 11"},
     ).json()
 
     labels = [s["label"] for s in body["assistantMessage"]["activityTrace"]]
@@ -309,14 +309,14 @@ def test_streamed_citations_arrive_with_the_finished_answer(
     passages as sources before the reply exists overstated the evidence in
     exactly the way the citation model is built to prevent.
     """
-    _upload(client, owner_headers, "stream-sop.txt", SOP_TEXT)
-    stub_gateway(StubProvider("Isolate the pump [1]."))
+    _upload(client, owner_headers, "stream-guide.txt", GUIDE_TEXT)
+    stub_gateway(StubProvider("Verify the licence [1]."))
 
     with client.stream(
         "POST",
         "/api/chat/stream",
         headers=owner_headers,
-        json={"message": "vibration tolerance bearing housing"},
+        json={"message": "purity tolerance assay bench"},
     ) as response:
         events = [line for line in response.iter_lines()]
 
@@ -341,7 +341,7 @@ def test_a_reply_that_cites_nothing_carries_no_sources(
     come back with three source cards under it. Sources mean "what this
     answer drew on", not "what the search returned".
     """
-    _upload(client, owner_headers, "unused-sop.txt", SOP_TEXT)
+    _upload(client, owner_headers, "unused-guide.txt", GUIDE_TEXT)
     stub_gateway(StubProvider("Hey! Doing well, thanks."))
 
     body = client.post(
@@ -360,9 +360,9 @@ def test_a_reply_that_cites_nothing_carries_no_sources(
 def test_csv_rows_keep_their_column_names(client, engineer_headers):
     """A row split from its header is unreadable, so rows are self-describing."""
     csv_bytes = (
-        b"Date,TagID,Equipment,Action,Technician\n"
-        b"2026-08-27,P-5150,Centrifugal Pump,Seal Flush Cleaning,S. Jain\n"
-        b"2026-08-14,C-2210,Compressor,Valve Replacement,A. Roy\n"
+        b"Date,Ref,Category,Action,Officer\n"
+        b"2026-08-27,HM-5150,Hallmark,Re-test Fee Refund,S. Jain\n"
+        b"2026-08-14,IS-2210,ISI Mark,Licence Check,A. Roy\n"
     )
     created = client.post(
         "/api/documents",
@@ -375,17 +375,17 @@ def test_csv_rows_keep_their_column_names(client, engineer_headers):
     ).json()
     assert chunks
     text = "\n".join(c["text"] for c in chunks)
-    assert "TagID: P-5150" in text
-    assert "Technician: S. Jain" in text
+    assert "Ref: HM-5150" in text
+    assert "Officer: S. Jain" in text
 
     hits = client.post(
-        "/api/search", headers=engineer_headers, json={"query": "P-5150 seal flush"}
+        "/api/search", headers=engineer_headers, json={"query": "HM-5150 re-test refund"}
     ).json()
     assert any(h["documentId"] == created["id"] for h in hits["results"])
 
 
 def test_reindexing_replaces_chunks_rather_than_appending(client, engineer_headers):
-    doc = _upload(client, engineer_headers, "reindex.txt", SOP_TEXT)
+    doc = _upload(client, engineer_headers, "reindex.txt", GUIDE_TEXT)
     first = doc["chunks"]
     assert first >= 1
 
@@ -396,7 +396,7 @@ def test_reindexing_replaces_chunks_rather_than_appending(client, engineer_heade
 
 
 def test_chunks_endpoint_is_scope_checked(client, engineer_headers, safety_headers):
-    doc = _upload(client, engineer_headers, "scoped-chunks.txt", SOP_TEXT)
+    doc = _upload(client, engineer_headers, "scoped-chunks.txt", GUIDE_TEXT)
     assert (
         client.get(
             f"/api/documents/{doc['id']}/chunks", headers=safety_headers
@@ -417,7 +417,7 @@ def test_search_explains_an_empty_result(client, safety_headers):
 
 
 def test_chunks_carry_their_section_and_page(client, engineer_headers):
-    doc = _upload(client, engineer_headers, "sectioned.txt", SOP_TEXT)
+    doc = _upload(client, engineer_headers, "sectioned.txt", GUIDE_TEXT)
     chunks = client.get(
         f"/api/documents/{doc['id']}/chunks", headers=engineer_headers
     ).json()
@@ -433,7 +433,7 @@ def test_semantic_indexing_stores_vectors_and_reports_it(
 ):
     stub_embedder()
 
-    doc = _upload(client, engineer_headers, "semantic.txt", SOP_TEXT)
+    doc = _upload(client, engineer_headers, "semantic.txt", GUIDE_TEXT)
     assert doc["status"] == "Indexed"
     assert doc["isSemanticallyIndexed"] is True
 
@@ -443,7 +443,7 @@ def test_semantic_indexing_stores_vectors_and_reports_it(
     assert all(c["embeddingModel"] == "stub-embed" for c in chunks)
 
     hits = client.post(
-        "/api/search", headers=engineer_headers, json={"query": "vibration"}
+        "/api/search", headers=engineer_headers, json={"query": "purity"}
     ).json()
     assert hits["mode"] == "hybrid"
     assert any(h["semanticRank"] is not None for h in hits["results"])
@@ -455,7 +455,7 @@ def test_embedding_failure_still_produces_a_searchable_document(
     """A dead embedder must not cost the document its lexical index."""
     stub_embedder(StubEmbedder(error=EmbeddingUnavailableError("endpoint down")))
 
-    doc = _upload(client, engineer_headers, "degraded.txt", SOP_TEXT)
+    doc = _upload(client, engineer_headers, "degraded.txt", GUIDE_TEXT)
 
     assert doc["status"] == "Indexed"
     assert doc["chunks"] >= 1
@@ -464,7 +464,7 @@ def test_embedding_failure_still_produces_a_searchable_document(
     assert "keyword search only" in doc["indexError"]
 
     hits = client.post(
-        "/api/search", headers=engineer_headers, json={"query": "lock-out tag-out P-7781"}
+        "/api/search", headers=engineer_headers, json={"query": "licence check HC-7781"}
     ).json()
     assert hits["mode"] == "lexical"
     assert any(h["documentId"] == doc["id"] for h in hits["results"])
@@ -479,23 +479,23 @@ def test_health_reports_hybrid_only_when_an_embedder_exists(client, stub_embedde
 
 
 # --- units -----------------------------------------------------------------
-def test_tokenizer_keeps_industrial_identifiers_whole():
-    tokens = tokenize("Pump P-204 at CDU-II runs below 2.5 mm/s per API 610.")
-    assert "p-204" in tokens
-    assert "cdu-ii" in tokens
+def test_tokenizer_keeps_standards_identifiers_whole():
+    tokens = tokenize("Licence L-204 at Zone-II runs below 2.5 percent per IS 2347.")
+    assert "l-204" in tokens
+    assert "zone-ii" in tokens
     assert "2.5" in tokens
-    # Stopwords go; "p" alone must not appear, or every pump would match.
+    # Stopwords go; "l" alone must not appear, or every licence would match.
     assert "the" not in tokens
-    assert "p" not in tokens
+    assert "l" not in tokens
 
 
 def test_bm25_ranks_the_passage_containing_the_query_terms_first():
     index = Bm25Index()
     index.add("a", "Routine housekeeping and general site cleanliness guidance.")
-    index.add("b", "Pump P-204 vibration tolerance is 2.5 mm/s RMS at the bearing.")
-    index.add("c", "Compressor C-101 suction filter differential pressure checks.")
+    index.add("b", "Licence L-204 fee tolerance is 2.5 percent at the audit.")
+    index.add("c", "Laboratory LB-101 sample verification differential checks.")
 
-    ranked = index.search("P-204 vibration tolerance")
+    ranked = index.search("L-204 fee tolerance")
     assert ranked[0][0] == "b"
     # Non-matching passages are absent rather than returned with score zero.
     assert "a" not in [key for key, _ in ranked]
@@ -503,23 +503,23 @@ def test_bm25_ranks_the_passage_containing_the_query_terms_first():
 
 def test_bm25_matches_a_differently_punctuated_identifier():
     index = Bm25Index()
-    index.add("a", "Pump P 204 was overhauled in March.")
-    ranked = index.search("P-204 overhaul")
+    index.add("a", "Licence L 204 was renewed in March.")
+    ranked = index.search("L-204 renew")
     assert ranked and ranked[0][0] == "a"
 
 
 def test_heading_detection_accepts_real_headings_and_rejects_prose():
-    assert detect_heading("Section 4.2 Vibration limits")
-    assert detect_heading("## 4.2 Vibration limits")
-    assert detect_heading("4.2 Vibration limits")
-    assert detect_heading("APPENDIX B TORQUE VALUES")
+    assert detect_heading("Section 4.2 Purity limits")
+    assert detect_heading("## 4.2 Purity limits")
+    assert detect_heading("4.2 Purity limits")
+    assert detect_heading("APPENDIX B TESTING CHARGES")
     assert detect_heading(
-        "The pump must be isolated before inspection begins in earnest."
+        "The licence must be renewed before inspection begins in earnest."
     ) is None
 
 
 def test_chunking_splits_on_boundaries_and_keeps_provenance():
-    body = "\n\n".join(f"Paragraph {i} about pump maintenance work." for i in range(40))
+    body = "\n\n".join(f"Paragraph {i} about licence renewal work." for i in range(40))
     extracted = Extracted(pages=[Page(number=1, text="Section 1.0 Overview\n\n" + body)])
 
     chunks = chunk_document(extracted, chunk_chars=300, overlap_chars=60)

@@ -130,7 +130,7 @@ def test_the_loop_runs_several_steps_rather_than_stopping_at_two(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "keep working", "agentId": "maint-intel"},
+        json={"message": "keep working", "agentId": "certification-guide"},
     ).json()
 
     executed = [
@@ -152,7 +152,7 @@ def test_a_repeated_call_is_refused_with_something_the_model_can_act_on(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "loop forever", "agentId": "maint-intel"},
+        json={"message": "loop forever", "agentId": "certification-guide"},
     ).json()
 
     # The trace shows the refusal happened. Labels are truncated for display,
@@ -178,7 +178,7 @@ def test_the_loop_stops_at_the_step_limit_and_says_so(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "work until stopped", "agentId": "maint-intel"},
+        json={"message": "work until stopped", "agentId": "certification-guide"},
     ).json()
 
     loop = next(
@@ -229,7 +229,7 @@ def test_the_call_budget_stops_a_model_that_batches_calls(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "batch it", "agentId": "maint-intel"},
+        json={"message": "batch it", "agentId": "certification-guide"},
     ).json()
 
     labels = [s["label"] for s in body["assistantMessage"]["activityTrace"]]
@@ -253,7 +253,7 @@ def test_a_turn_with_no_tool_use_reports_no_loop(
     body = client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "hello", "agentId": "maint-intel"},
+        json={"message": "hello", "agentId": "certification-guide"},
     ).json()
 
     labels = [s["label"] for s in body["assistantMessage"]["activityTrace"]]
@@ -271,7 +271,7 @@ def test_the_model_is_told_it_ran_out_rather_than_being_truncated(
     client.post(
         "/api/chat",
         headers=owner_headers,
-        json={"message": "work", "agentId": "maint-intel"},
+        json={"message": "work", "agentId": "certification-guide"},
     )
 
     system = " ".join(m.content for m in stub.last_prompt if m.role == "system")

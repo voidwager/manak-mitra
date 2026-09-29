@@ -14,11 +14,11 @@ import { fireEvent } from '@testing-library/dom';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  SynqBrand,
+  BrandMark,
   BRAND_VARIANTS,
   DEFAULT_BRAND_VARIANT,
   useBrandVariant
-} from './SynqBrand';
+} from './BrandMark';
 
 const Harness = () => {
   const [variant, choose] = useBrandVariant();
@@ -32,50 +32,50 @@ const Harness = () => {
   );
 };
 
-describe('SynqBrand', () => {
+describe('BrandMark', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
   it('draws the lockup by default', () => {
-    render(<SynqBrand />);
-    expect(screen.getByAltText('SYNQ')).toHaveAttribute('src', '/synq-logo.svg');
-    expect(screen.getByText('Synthetic Yield for')).toBeTruthy();
+    render(<BrandMark />);
+    expect(screen.getByAltText('Manak Mitra')).toHaveAttribute('src', '/manak-mitra-logo.svg');
+    expect(screen.getByText('Indian Standards')).toBeTruthy();
   });
 
   it('adds the tagline for the lockup, as text', () => {
-    render(<SynqBrand variant="lockup" />);
+    render(<BrandMark variant="lockup" />);
     // Text, not artwork: a traced tagline cannot stay crisp when it is
     // scaled down to sidebar size, and this one has to be readable there.
-    expect(screen.getByText('Synthetic Yield for')).toBeTruthy();
-    expect(screen.getByText('Neural Quantization')).toBeTruthy();
+    expect(screen.getByText('Indian Standards')).toBeTruthy();
+    expect(screen.getByText('Help Desk')).toBeTruthy();
   });
 
   it('draws the same mark at the same size in both variants', () => {
-    // Only the tagline comes and goes. A SYNQ that changed size when the
+    // Only the tagline comes and goes. A mark that changed size when the
     // tagline appeared would read as two different logos.
-    const { unmount } = render(<SynqBrand variant="wordmark" />);
-    const plain = screen.getByAltText('SYNQ').style.height;
-    expect(screen.queryByText('Synthetic Yield for')).toBeNull();
+    const { unmount } = render(<BrandMark variant="wordmark" />);
+    const plain = screen.getByAltText('Manak Mitra').style.height;
+    expect(screen.queryByText('Indian Standards')).toBeNull();
     unmount();
 
-    render(<SynqBrand variant="lockup" />);
-    expect(screen.getByAltText('SYNQ').style.height).toBe(plain);
+    render(<BrandMark variant="lockup" />);
+    expect(screen.getByAltText('Manak Mitra').style.height).toBe(plain);
     expect(plain).toBe(BRAND_VARIANTS.wordmark.height + 'px');
   });
 
   it('falls back to the drawn wordmark when the file will not load', () => {
-    render(<SynqBrand variant="wordmark" />);
-    fireEvent.error(screen.getByAltText('SYNQ'));
-    expect(screen.queryByRole('img', { name: 'SYNQ' })).toBeTruthy();
-    expect(screen.queryByAltText('SYNQ')).toBeNull();
+    render(<BrandMark variant="wordmark" />);
+    fireEvent.error(screen.getByAltText('Manak Mitra'));
+    expect(screen.queryByRole('img', { name: 'Manak Mitra' })).toBeTruthy();
+    expect(screen.queryByAltText('Manak Mitra')).toBeNull();
   });
 
   it('ignores a variant it does not have', () => {
-    render(<SynqBrand variant="does-not-exist" />);
+    render(<BrandMark variant="does-not-exist" />);
     // Falls back to the default rather than rendering nothing.
-    expect(screen.getByAltText('SYNQ')).toBeTruthy();
-    expect(screen.getByText('Synthetic Yield for')).toBeTruthy();
+    expect(screen.getByAltText('Manak Mitra')).toBeTruthy();
+    expect(screen.getByText('Indian Standards')).toBeTruthy();
   });
 });
 

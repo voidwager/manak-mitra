@@ -1,261 +1,232 @@
 # Demo walkthrough
 
-A scripted run through what the workbench actually does, in the order that
-makes the point. Roughly eight minutes at a normal pace.
+A scripted run through what Manak Mitra actually does, in the order that
+makes the point. About eight minutes at a normal pace.
 
-Everything in the dataset is **fictional** — an invented refinery, invented
-equipment, invented figures. Say so once at the start; it is part of the
-pitch, not a disclaimer to hide.
+The knowledge base is **real public BIS material** - scheme pages, the
+product lists under compulsory certification, hallmarking rules, the lab
+lists, the BIS Act - each file carrying the URL it came from and the date it
+was captured (`data/bis/source/MANIFEST.md`). The *staff* accounts and three
+short *internal* documents are fictional and labelled so; they exist to show
+access control, because no real BIS internal data belongs in a demo. Say
+that once at the start.
 
-Every claim below is checked by `scripts/verify_demo.py`. If the demo has
-drifted, that script fails rather than you finding out in front of an
-audience.
+The access-control and retrieval claims below are checked by
+`scripts/verify_demo.py`. If the demo has drifted, that script fails rather
+than you finding out in front of an audience. What the *model* writes varies
+run to run; the script checks what it is given, not how it phrases it.
 
 ---
 
 ## Before you start
 
 ```bash
-python scripts/seed_db.py     # corpus is written and indexed
+python scripts/seed_db.py     # BIS corpus written and indexed
 start.bat                     # or: uvicorn + npm run dev
 python scripts/verify_demo.py # confirms the walkthrough still holds
 ```
 
-Sign in as **Sanyam Jain** (`testowner@refinery.example`), password
-`demo1234`. Clicking a persona card fills the form; it does not sign
-you in - the server verifies the password either way.
+Open the site. **There is no sign-in screen** - you are straight in as a
+visitor, because a consumer asking about a hallmark should not need an
+account. Staff sign in from the profile menu (**Staff sign-in**) as
+`admin@bis-helpdesk.example`, password `demo1234` (development only - outside
+it the seed refuses to run without an explicit `DEMO_PASSWORD`).
 
-That password works in development only. Outside it the seed refuses to run
-without an explicit `DEMO_PASSWORD`, and the sign-in page stops offering the
-password at all - it fills the address and leaves the rest to whoever
-deployed it.
-
-Check the pill in the top-right. It reads **External model** with Groq
-configured, and **On-premise** with a local runtime. Do not skip past this —
-it is the honesty claim the whole project rests on, and it is derived from
-the running provider rather than asserted.
+Check the pill in the top-right: **External model** with Groq, **On-premise**
+with a local runtime. It is derived from the running provider, never asserted.
 
 ---
 
-## 1. The knowledge base is real (1 min)
+## 1. The knowledge base is real and checkable (1 min)
 
-Open **Documents** as **Sanyam Jain** (Owner).
+As a visitor, open **BIS Sources**.
 
-Five documents, all **Indexed**, with chunk counts. The strip above the table
-reads the retrieval mode from `/api/health` — *"Keyword retrieval (BM25)
-only"* unless an embedding endpoint is configured.
+Nineteen documents in six public folders - Certification Schemes, Standards &
+QCOs, Hallmarking, Laboratories, Consumer Help, BIS Act & Rules - all
+**Indexed**. Preview **Hallmarking for Consumers - HUID, Testing,
+Compensation.md**: the first lines are the source URL on bis.gov.in and the
+date it was captured.
 
-> **Say:** these were extracted, chunked and indexed by the pipeline. The
-> chunk count is what retrieval actually searches.
-
-Click **Preview** on the pump SOP. You see the *real extracted passages*,
-page by page. Nothing here is authored for the demo — it is what the parser
-produced.
+> **Say:** every answer is built from these. Anyone can open the source a
+> citation points at and check it against bis.gov.in.
 
 ---
 
-## 2. An answer with a checkable citation (2 min)
+## 2. A consumer question, then the same question in Hindi (2 min)
 
-Go to **Chat**, agent **Maintenance Intelligence**.
+Click the starter question, or:
 
-> **Ask:** *What is the acceptable vibration limit for a CDU-II pump, and
-> what happens above it?*
+> **Ask:** *How can I check that the hallmark on a gold chain is genuine?*
 
-Expect an answer citing **Centrifugal Pump Inspection SOP.pdf**, page 4,
-section 4.2 — 2.5 mm/s RMS, with the escalation above 3.2 mm/s.
+Expect: look for the HUID and verify it with **Verify HUID** in the BIS CARE
+app, cited to *Hallmarking for Consumers*.
 
-Click the citation. It opens the exact passage the answer came from.
+Now click the Hindi starter question:
 
-> **Say:** the citation is built from the passage that was retrieved and put
-> in the prompt. It is never parsed out of the model's text — so the system
-> cannot cite a document it did not read.
+> **Ask:** *सोने के गहने पर HUID कैसे जांचें?*
 
-Open **Agent activity** underneath. It lists the real steps: how many
-passages were searched, in which folders, and what was retrieved.
+The reply comes back **in Hindi**, citing the same English BIS document. Open
+**Agent activity**: the first step reads *Searched in English: "…"* with the
+query the question was translated into.
 
----
+> **Say:** BIS publishes in English, and keyword search matches words - so a
+> Hindi question would find nothing. We search with an English rewrite *and*
+> the original (so an HUID or IS number typed in survives), then answer in
+> the user's language. The translation is shown, so a reader can see whether
+> it found the right thing.
 
-## 3. Access control the model cannot talk its way around (2 min)
-
-This is the part worth doing slowly.
-
-Sign out, sign in as **Dev Patel** (HSE Safety Officer, Safety folder only).
-
-Open **Documents**: one document. The others were never sent to his browser —
-they are filtered in SQL, not hidden in the UI.
-
-> **Ask:** *What is the hydrocracker unit's margin per tonne?*
-
-He gets no answer and no citation. The activity trace says nothing matched
-in his scope.
-
-Sign back in as **Sanyam** and ask the identical question. He gets the figure
-from **Hydrocracker Unit Strategic Audit.pdf**, which is marked owner
-confidential.
-
-> **Say:** same question, same model, same corpus — different clearance. The
-> filter is the one the documents API uses, so retrieval cannot become a way
-> around it. A leak here would arrive paraphrased inside an answer, where
-> nobody thinks to check permissions.
+On Chrome or Edge, pick **हिन्दी** next to the mic and *speak* the question.
+Recognition is the browser's own; the transcript lands in the box to be
+checked before sending.
 
 ---
 
-## 4. Agents are configuration, not costume (1 min)
+## 3. An MSME: "which standard applies to my product?" (2 min)
 
-Open **Agents**.
+> **Ask:** *I make stainless steel pressure cookers. Which standard applies
+> and is certification compulsory?*
 
-Each card shows a derived status and a real capability list. **Document
-Vision** reads **Limited**, and says its vision capability needs a model this
-deployment does not have wired up yet.
+The activity trace shows `find_standard` running. Expect **IS 2347:2017,
+Domestic Pressure Cooker**, under a Quality Control Order (Q085, 2020), in
+**Scheme-I (ISI Mark)** - cited to the row of *Products under Compulsory
+Certification - Scheme-I*.
 
-> **Say:** that status is computed per request from the running system. It
-> used to be a hardcoded string, and the agent advertised OCR it did not have.
-
-Back in **Chat**, ask the *same* question with **SOP Assistant** that you
-asked Maintenance Intelligence in step 2 — the CDU-II pump vibration limit.
-
-SOP Assistant is scoped to Safety and All Units, so it finds nothing.
-
-> **Say:** the agent narrows the search. It cannot widen it — an agent scoped
-> to a folder you are not cleared for returns nothing, not the folder.
-
----
-
-## 5. Tools that actually run (2 min)
-
-Still on **Maintenance Intelligence**:
-
-> **Ask:** *From the maintenance history, what is the total downtime across
-> all recorded jobs?*
-
-Watch the activity panel. It calls `analyse_table` — first for the schema,
-then to sum the column — and answers with the exact figure.
-
-> **Say:** the model did not add those up. It asked the server to, and the
-> server computed it exactly. Language models are unreliable at arithmetic
-> over more than a handful of rows, and a quietly wrong total is the kind of
-> error nobody catches.
+> **Say:** the answer is a row of BIS's own list, not the model's memory. The
+> tool reads the three published lists - 861 products - as tables. It also
+> notes the row does not mention "stainless steel", so the answer tells the
+> user to confirm the standard's scope rather than overclaiming.
 
 Then:
 
-> **Ask:** *A pump moves 47.5 m3/h for 18.25 hours. What total volume?*
+> **Ask:** *Do I need BIS registration to sell power banks?*
 
-It calls `calculator` and returns 866.875 m³.
-
-Open **Tools**. Five are **Callable by agents**; **Image Analyzer** reads
-**Not available yet** with the reason.
-
-> **Say:** the toggle is a real gate. Switch a tool off and no agent is
-> offered it — the model is never given the option.
+Expect the **Compulsory Registration Scheme (CRS)** - power banks are listed
+under **IS 13252(Part 1):2010** - and the Certification Guide's explanation of
+what registration involves.
 
 ---
 
-## 6. One deployment, several models (1 min)
+## 4. What a visitor can never reach (2 min)
 
-Open **Agents** → the gear on **Maintenance Intelligence**. The **Model**
-field is a *role*, not a model id: Default, Reasoning, or Fast. The hint
-underneath names the model that role currently resolves to.
+This is the part worth doing slowly.
 
-> **Say:** the router picks a model per turn and records why. Every answer's
-> activity trace names the model that produced it and the reason it was
-> chosen — routing is deterministic, so an answer is reproducible.
+> **Ask (as a visitor):** *What was the helpdesk query volume last quarter?*
 
-Now attach an image. Click the paperclip and add a photo of a gauge, a
-nameplate, a schematic — anything with a number or text in it.
+No answer and no citation. The figure exists - in *Helpdesk Query Analytics
+Q2 2026 (sample)*, filed in **BIS Internal** - but a visitor's search never
+sees that folder. It is filtered in SQL, not hidden in the UI.
 
-> **Ask:** *What reading is shown here?*
+Sign in as staff (`admin@bis-helpdesk.example`) and ask the identical
+question. The administrator gets **18,240**, cited.
 
-The chip shows which model will read it. The answer comes back, and the
-activity trace reads:
+Sign in as `certification@bis-helpdesk.example` (Certification Officer) and
+ask about the *Hallmarking Desk's* complaint register. Nothing: officers see
+every public source plus their own desk, and no other desk.
 
-```
-Read 1 image(s) with a vision model
-Model routing: This turn includes an image, so it was routed to the vision model.
-Generated response (qwen/qwen3.8-27b via groq, external provider)
-```
+> **Say:** same question, same model, same corpus - different clearance. A
+> leak here would arrive paraphrased inside an answer, where nobody thinks to
+> check permissions, which is why retrieval uses the same filter as the
+> documents API.
 
-> **Say:** an image is only ever sent to a model that accepts images. With no
-> vision model configured the attachment is refused at upload with a reason,
-> and the assistant is told it could not read the file — because the
-> alternative is a model that silently ignores the picture and answers
-> anyway, which the user would trust.
+As a visitor, the site also offers no **Create Agent** and no **Tools** page -
+and the API refuses both (403) whatever the UI shows, because an agent is
+listed for everyone and a tool switch is global.
 
-Chat attachments are separate from the knowledge base on purpose: a photo you
-paste into one question is private to you and never indexed. Routing every
-screenshot into the shared corpus would degrade retrieval for the whole team.
+---
+
+## 5. Specialists narrow the search (1 min)
+
+Open **Specialists**. Each card shows what it searches: the Standards Finder
+reads *Standards & QCOs*, the Lab Locator reads *Laboratories*, and so on.
+**Mark & Label Reader** reads **Limited** - it needs a vision model this
+deployment may not have, and says so.
+
+> **Ask the Lab Locator:** *Which BIS-recognised labs are in Maharashtra?*
+
+Expect recognised labs listed with their state, cited to *BIS Recognised
+Laboratories (Group-1 and Group-2)*. The list carries its own warning that
+suspension history was omitted, and the answer should say to confirm current
+status.
+
+---
+
+## 6. Tools that compute rather than guess (1 min)
+
+> **Ask:** *I want 7 pieces of my old jewellery tested at a hallmarking
+> centre. What will it cost?*
+
+Expect **Rs 315** - Rs 45 per article, over the Rs 200 minimum per lot -
+with the calculator in the activity trace and the charge cited to the
+consumer testing guidelines.
+
+As `hallmarking@bis-helpdesk.example`:
+
+> **Ask:** *From the complaint register, what is the average number of days a
+> complaint stays open?*
+
+`analyse_table` computes **12** from the six rows exactly.
+
+> **Say:** the model does not do the arithmetic. It asks the server to.
 
 ---
 
 ## 7. What it refuses to do (1 min)
 
-Close on this. It is the strongest part, and there are two distinct cases —
-the second is the one that matters.
+**The product is not on any compulsory list.**
 
-**Nothing matches at all.**
+> **Ask:** *Which IS applies to PVC pipes for drinking water?*
 
-> **Ask:** *What is the die swell coefficient for polymer extrusion?*
+The tool finds iron water pipes but notes none of the rows mention PVC. The
+answer says PVC pipes do not appear on the compulsory-certification lists in
+the knowledge base, and does not name a standard from memory.
 
-No passage in the corpus is related. Retrieval returns nothing, the strict
-guardrail applies, and the reply carries no citation.
+**Something matches, but does not answer.** The realistic case.
 
-**Something matches, but does not answer.** This is the realistic one.
+> **Ask:** *What is the GST rate on gold jewellery?*
 
-> **Ask:** *What does SOP-CDU2-0999 say about pump P-999?*
+Keyword search *does* return passages - BIS fee pages say "GST as applicable
+will be charged". None gives a rate for jewellery, because GST is not BIS's
+to set. The answer says the BIS documents do not cover it, instead of
+attaching a plausible percentage to a fee page it did retrieve.
 
-Keyword search *does* return five passages — "SOP", "pump" and "procedure"
-all appear in the corpus. But no passage mentions SOP-CDU2-0999 or P-999,
-because neither exists.
+**Nothing is related at all.**
 
-The assistant tells you that, instead of writing a plausible clause number
-onto the pump SOP it *did* retrieve.
+> **Ask:** *Who won the last cricket world cup?*
 
-> **Say:** this is the failure mode the product is built against. Retrieval
-> handing over related-but-irrelevant material is normal — that is what
-> keyword search does. The guarantee is that a citation is only ever built
-> from a passage that was actually retrieved, so the model has nothing to
-> attach a fabricated SOP number to. It cannot cite its way into a document
-> it did not read.
+No passage, no citation; the strict no-retrieval guardrail applies.
+
+> **Say:** a wrong IS number costs a manufacturer a licence application. So
+> IS numbers, fees and timelines come from a retrieved passage or not at all.
 
 ---
 
-## 8. It is a real access control, not a shape (1 min)
+## 8. Real access control, not a shape (1 min)
 
-Worth thirty seconds if anyone asks whether the personas are just a UI toggle.
+In devtools, any request carries an `Authorization: Bearer` token, checked
+against a session row server-side. A visitor's token belongs to a throwaway
+account of their own - two visitors never see each other's chats.
 
-Open the browser devtools network tab and look at any request: identity is an
-`Authorization: Bearer` token, verified against a session row server-side.
-Until Phase 16 it was an `X-User-Id` header the client asserted - anyone
-could type another user's id and become them. That header no longer
-authenticates anything.
-
-As **Sanyam**, `GET /api/audit` returns the trail - every upload, folder
-move, reclassification, tool call and sign-in, including failed ones. As
-**Dev**, the same request returns 403.
-
-> **Say:** the audit log existed from early on and nothing could read it. A
-> log nobody reads is a log, not governance. And sessions are rows rather
-> than tokens-that-expire, so an administrator can end someone's access the
-> moment they leave - which a JWT cannot do without a blocklist, and a
-> blocklist is just this table with extra steps.
+As the administrator, `GET /api/audit` returns the trail - uploads, folder
+moves, tool calls, sign-ins and visitor sessions. As a visitor or officer,
+403.
 
 ---
 
 ## If something goes wrong
 
-**A document says "Processing" forever** — indexing runs in the background;
-check the backend log. It ends as *Indexing failed* with a reason.
+**The site shows a sign-in screen instead of letting you in** - public mode is
+off (`PUBLIC_MODE=false`) or the backend is unreachable; the banner says which.
 
-**Everything returns 401** — the session expired or was revoked. Sign in
-again; sessions idle out after 12 hours and last at most 7 days.
+**The old refinery documents appear** - an old database. The default file is
+now `data/manak_mitra.db`; delete a stale one and run `scripts/seed_db.py`.
 
-**Chat returns 503** — no model configured. Check `MODEL_PROVIDER`,
+**Chat returns 503** - no model configured. Check `MODEL_PROVIDER`,
 `MODEL_NAME` and the key in `.env`, then restart the backend.
 
-**Chat returns 429** — Groq rate limit (8000 tokens/minute). Tool-heavy
-questions burn tokens quickly. Wait a minute; do not retry in a loop.
+**A Hindi question gets no citation** - the translation step needs a model;
+the activity trace says *Could not translate the question for search* when it
+was unavailable. Semantic search (`EMBEDDING_MODEL=bge-m3`, multilingual)
+removes the dependency.
 
-**A tool never gets called** — check the agent has it granted (Agents → the
-gear icon) and that the tool is switched on in **Tools**.
-
-**Nothing retrieves** — run `python scripts/verify_demo.py`. It reports which
+**Nothing retrieves** - run `python scripts/verify_demo.py`. It reports which
 step broke.

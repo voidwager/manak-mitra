@@ -115,7 +115,7 @@ export const ChatSettingsMenu = () => {
             <Sparkles size={14} className="choice-icon" />
             <div className="choice-body">
               <div className="choice-name">
-                {scope === 'chat' && myDefault ? 'Use my default' : 'Automatic (SI-1)'}
+                {scope === 'chat' && myDefault ? 'Use my default' : 'Automatic (Manak Mitra)'}
               </div>
               <div className="choice-note">
                 {scope === 'chat' && myDefault

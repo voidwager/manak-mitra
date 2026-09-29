@@ -227,7 +227,7 @@ export const LoginModal = () => {
 
           <button type="submit" className="login-submit-btn" disabled={busy}>
             <ShieldCheck size={16} />
-            <span>{busy ? 'Signing in...' : 'Sign in to the workbench'}</span>
+            <span>{busy ? 'Signing in...' : 'Staff sign in'}</span>
           </button>
         </form>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../state/AppContext';
-import { SynqBrand, useBrandVariant } from './SynqBrand';
+import { BrandMark, useBrandVariant } from './BrandMark';
 import {
   BarChart3,
   ChevronDown,
@@ -46,7 +46,7 @@ export const Sidebar = () => {
    * <img> boundary and reach into the file. See .brand-logo below.
    *
    * The choice lives in localStorage and is shared with the picker in
-   * Settings; SynqBrand owns both ends of that.
+   * Settings; BrandMark owns both ends of that.
    */
   const [brandVariant] = useBrandVariant();
 
@@ -121,15 +121,15 @@ export const Sidebar = () => {
             * Each variant carries its own height, because the lockup is not
             * the wordmark plus a line - the tagline is set small enough that
             * matching the wordmark's height would reduce it to a smudge. See
-            * SynqBrand for the numbers.
+            * BrandMark for the numbers.
             */}
           <div className="brand-title-group">
-            <SynqBrand variant={brandVariant} />
+            <BrandMark variant={brandVariant} />
           </div>
           <button 
             className="brand-action-btn"
             onClick={handleNewChat}
-            title="Open workbench in new view"
+            title="Open Manak Mitra in a new view"
           >
             <ExternalLink size={16} />
           </button>
