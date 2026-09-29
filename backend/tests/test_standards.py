@@ -120,3 +120,43 @@ def test_an_unlisted_product_returns_nothing(rows):
 def test_an_empty_description_returns_nothing(rows):
     assert _top(rows, "   ") == []
     assert _top(rows, "which standard applies") == []
+
+# ---------------------------------------------------------------------------
+# In a real turn
+# ---------------------------------------------------------------------------
+def test_a_product_question_puts_the_listed_row_in_front_of_the_model(client, stub_gateway):
+    """Regression from a live run: asked about pressure cookers, keyword
+    retrieval surfaced the *gasket* row, missed IS 2347, and the model said
+    no standard applied. The lookup now runs for any standards question,
+    not only when the model chooses to call the tool."""
+    from tests.conftest import StubProvider
+
+    provider = stub_gateway(StubProvider(reply="See [1]."))
+    token = client.post("/api/auth/guest").json()["token"]
+    response = client.post(
+        "/api/chat",
+        json={"message": "I make stainless steel pressure cookers. Which Indian Standard applies?"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200, response.text
+
+    system = provider.last_prompt[0].content
+    assert "IS 2347:2017" in system
+    assert "Domestic Pressure Cooker" in system
+
+    trace = [t["label"] for t in response.json()["assistantMessage"]["activityTrace"]]
+    assert any("lists of products under compulsory certification" in label for label in trace)
+
+
+def test_a_question_that_is_not_about_standards_gets_no_lookup(client, stub_gateway):
+    from tests.conftest import StubProvider
+
+    stub_gateway(StubProvider(reply="Use BIS CARE [1]."))
+    token = client.post("/api/auth/guest").json()["token"]
+    response = client.post(
+        "/api/chat",
+        json={"message": "How do I verify the HUID on my gold chain?"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    trace = [t["label"] for t in response.json()["assistantMessage"]["activityTrace"]]
+    assert not any("compulsory certification" in label for label in trace)

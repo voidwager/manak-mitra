@@ -53,6 +53,7 @@ from app.models import router as model_router
 from app.models.registry import get_registry
 from app.rag import RetrievalResult, retrieve
 from app.services import language
+from app.tools.builtin import standards
 from app.rag.reader import DocumentPart, read_document
 from app.rag.retriever import Passage
 from app.services.agent_loop import (
@@ -223,6 +224,10 @@ class Turn:
     #: What retrieval searched for - the question, plus an English rewrite
     #: when it was asked in another script.
     search: object = None
+
+    #: The product phrase looked up in BIS's product lists, when this was a
+    #: question about which standard applies. Empty otherwise.
+    standards_phrase: str = ""
 
     #: How the agentic loop ended, and what it spent getting there.
     loop: object = None
@@ -412,6 +417,75 @@ def _lead_with_attachments(
         passages=merged[:cap],
         mode=retrieval.mode if retrieval.mode != "none" else focused.mode,
         reason="",
+    )
+
+
+def _lead_with_standards(
+    db: Session,
+    user: User,
+    question: str,
+    retrieval: RetrievalResult,
+) -> tuple[RetrievalResult, str]:
+    """Put the matching rows of BIS's product lists at the front.
+
+    "Which standard applies to my product" is the helpdesk's central
+    question, and it was the one question keyword retrieval got wrong in a
+    live run: asked about pressure cookers, it surfaced the row for pressure
+    cooker *gaskets* from a 266-chunk list, missed the cooker itself, and the
+    model concluded no standard applied. The `find_standard` tool reads the
+    list correctly, but whether to call it was the model's choice, and the
+    model did not.
+
+    So for a question about standards or certification the lookup is done
+    here, the same way a whole-document question is read rather than
+    searched. Deterministic, permission-bound (only lists this user may
+    see), and cited like any passage. Returns (result, the product phrase
+    matched - empty when nothing was).
+    """
+    if not standards.STANDARD_QUESTION.search(question):
+        return retrieval, ""
+    try:
+        rows = standards.lists_visible_to(db, user)
+        phrase, matches = standards.rows_for_question(rows, question)
+    except Exception:  # noqa: BLE001 - never break a turn over this
+        log.exception("Product-list lookup failed; using ordinary retrieval")
+        return retrieval, ""
+    if not matches:
+        return retrieval, ""
+
+    leading = []
+    for _, row in matches:
+        fields = "; ".join(
+            f"{k}: {v}" for k, v in row.cells.items() if v and k.lower() != "sr"
+        )
+        missing = standards.unmatched_words(row, phrase)
+        if missing:
+            fields += (
+                f" [This row does not mention: {', '.join(missing)} - check the "
+                "standard's scope covers the user's product.]"
+            )
+        leading.append(
+            Passage(
+                chunk_id=f"std:{row.document_id}:{row.line_number}",
+                document_id=row.document_id,
+                document_name=row.document_name,
+                text=f"Row of the BIS list of products under compulsory certification - {fields}",
+                page=1,
+                section=row.is_number,
+                score=1.0,
+            )
+        )
+
+    listed = {(p.document_id, p.section) for p in leading}
+    rest = [p for p in retrieval.passages if (p.document_id, p.section) not in listed]
+    return (
+        replace(
+            retrieval,
+            passages=leading + rest[: max(settings.rag_top_k - len(leading), 2)],
+            mode=retrieval.mode if retrieval.mode != "none" else "lexical",
+            reason="",
+        ),
+        phrase,
     )
 
 
@@ -671,6 +745,13 @@ def prepare_turn(
             db, user, search.text, retrieval, attached_document_ids
         )
 
+    # "Which standard applies to X" is answered from the product lists as
+    # tables, not left to ranking or to the model's choice of tool. The
+    # English rewrite is used when there is one: the lists are English.
+    retrieval, standards_phrase = _lead_with_standards(
+        db, user, search.translated or query, retrieval
+    )
+
     # A question about a document as a whole is served by reading it, not by
     # ranking inside it. Done here rather than left to the model: see
     # `_lead_with_document_read`.
@@ -764,6 +845,7 @@ def prepare_turn(
         resolved_attachments=resolved,
         dispatch=dispatch,
         search=search,
+        standards_phrase=standards_phrase,
     )
 
 
@@ -878,6 +960,7 @@ def build_activity_trace(
     # path and became false the moment an image could genuinely be read.
     trace.extend(_dispatch_trace(turn))
     trace.extend(_search_language_trace(turn))
+    trace.extend(_standards_trace(turn))
     trace.extend(_attachment_trace(turn))
     trace.extend(_document_read_trace(turn))
     trace.extend(_retrieval_trace(retrieval))
@@ -922,6 +1005,18 @@ def _search_language_trace(turn: "Turn | None") -> list[dict]:
     if search.note:
         return [{"label": search.note, "status": "skipped"}]
     return []
+
+
+def _standards_trace(turn: "Turn | None") -> list[dict]:
+    phrase = getattr(turn, "standards_phrase", "") if turn else ""
+    if not phrase:
+        return []
+    return [
+        {
+            "label": f"Looked up \"{phrase[:60]}\" in BIS lists of products under compulsory certification",
+            "status": "done",
+        }
+    ]
 
 
 def _attachment_trace(turn: "Turn | None") -> list[dict]:

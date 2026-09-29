@@ -37,10 +37,16 @@ log = get_logger(__name__)
 #: Latin tokens - "IS 1293", "ISI", "BIS", "HUID".
 NON_LATIN_THRESHOLD = 0.3
 
-#: Enough for a keyword query; a longer reply means the model answered the
-#: question instead of translating it.
-MAX_QUERY_TOKENS = 60
+#: Generous on purpose. The fast route may be a reasoning model, which
+#: spends its budget thinking before it writes a word: at 60 tokens
+#: gpt-oss-20b returned an empty string with finish_reason "length", every
+#: time, and every Hindi question was searched untranslated.
+MAX_QUERY_TOKENS = 400
 MAX_INPUT_CHARS = 600
+
+#: A search query, not an answer. Longer output means the model answered
+#: the question instead of translating it.
+MAX_QUERY_CHARS = 200
 
 TRANSLATE_PROMPT = """Rewrite the question below as a short English search query \
 for the Bureau of Indian Standards (BIS) knowledge base.
@@ -112,9 +118,13 @@ def search_query(question: str) -> SearchQuery:
         )
 
     translated = " ".join((completion.text or "").split()).strip("\"'` ")
-    if not translated or needs_translation(translated):
-        # Empty, or the model replied in the source language rather than
-        # translating. Either way it is not an English query.
+    if (
+        not translated
+        or needs_translation(translated)
+        or len(translated) > MAX_QUERY_CHARS
+    ):
+        # Empty, in the source language, or an answer rather than a query.
+        # Either way it is not an English search query.
         return SearchQuery(
             text=question,
             note="Could not translate the question for search; searched as written.",

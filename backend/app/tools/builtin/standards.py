@@ -135,7 +135,9 @@ def _tokens(text: str) -> list[str]:
 #: Words that end the product name and start a modifier: "pipes FOR
 #: drinking water", "helmet FOR riders", "cables WITH PVC insulation".
 _MODIFIER_START = re.compile(
-    r"\b(?:for|of|to|with|without|in|on|used|using|made|meant|applies|apply)\b", re.I
+    r"\b(?:for|of|to|with|without|in|on|from|by|used|using|made|meant|imported|"
+    r"manufactured|sold|applies|apply)\b",
+    re.I,
 )
 
 
@@ -342,6 +344,76 @@ def rank(rows: list[StandardRow], query: str, limit: int) -> list[tuple[float, S
     # a common word, and the model cites them as if they applied.
     best = scored[0][0]
     return [pair for pair in scored if pair[0] >= best * 0.5][:limit]
+
+
+#: A question about which standard, licence or registration applies. Only
+#: these get the automatic product-list lookup; a question about HUIDs or
+#: complaint procedures does not.
+STANDARD_QUESTION = re.compile(
+    r"\b(?:standards?|IS\s*[:/-]?\s*\d+|ISI|QCO|quality control order|"
+    r"certif\w*|licen[cs]e\w*|registration|register|CRS|compulsory|mandatory)\b"
+    # "Which IS applies to ..." - IS as a word, not a number.
+    r"|\bIS\s+(?:applies|apply|number|code|for)\b",
+    re.I,
+)
+
+#: Where a product name can start or stop inside a whole question.
+_CLAUSE_BREAK = re.compile(r"[.?!;,]|\b(?:and|or|but|which|what|whether|is|are|do|does)\b", re.I)
+
+#: Question scaffolding that is never the product - including the
+#: certification vocabulary the question is asked in ("is the ISI mark
+#: compulsory for helmets": the product is "helmets").
+_QUESTION_WORDS = frozenset(
+    """how do does can could should would will am i me my you your we our
+    sell selling buy need needs get got want there any about under
+    isi mark marks bis indian standard standards applies apply applicable
+    compulsory mandatory certification certificate licence license
+    registration register required require""".split()
+)
+
+
+def lists_visible_to(db, user) -> list[StandardRow]:
+    """Every product-list row this user may see."""
+    documents = db.scalars(
+        visible_documents_query(user).where(Document.folder == STANDARDS_FOLDER)
+    ).all()
+    return [row for document in documents for row in _rows_for(document)]
+
+
+def rows_for_question(
+    rows: list[StandardRow], question: str, limit: int = DEFAULT_RESULTS
+) -> tuple[str, list[tuple[float, StandardRow]]]:
+    """Find the product a whole question is about, and its rows.
+
+    A question is several phrases - "I make stainless steel pressure
+    cookers. Which Indian Standard applies, and is certification
+    compulsory?" - and only one of them names the product. Each clause is
+    tried in order, with question scaffolding removed, and the first that
+    names a listed product wins. Returns (the phrase used, the matches).
+    """
+    # An IS number is an exact identifier; look it up before any splitting,
+    # which would otherwise cut "IS 2347" at the word "is".
+    if _IS_NUMBER.search(question):
+        matches = rank(rows, " ".join(m.group(0) for m in _IS_NUMBER.finditer(question)), limit)
+        if matches:
+            return question, matches
+
+    for clause in _CLAUSE_BREAK.split(question):
+        # A clause can still hold scaffolding and product together:
+        # "registration to sell power banks". Each fragment between
+        # modifying words gets its own try.
+        for fragment in _MODIFIER_START.split(clause):
+            words = [
+                w for w in fragment.split()
+                if w.lower().strip("'\".,?") not in _QUESTION_WORDS
+            ]
+            phrase = " ".join(words).strip()
+            if not _tokens(phrase):
+                continue
+            matches = rank(rows, phrase, limit)
+            if matches:
+                return phrase, matches
+    return "", []
 
 
 class FindStandardTool(Tool):
