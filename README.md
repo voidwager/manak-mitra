@@ -1027,3 +1027,18 @@ Assessment Regulations were not captured from a static public source. The
 assistant says so when asked rather than filling the gap from memory. The
 next step is scheduled re-capture of these pages, and
 `EMBEDDING_MODEL=bge-m3` for multilingual semantic search.
+---
+
+## Credits
+
+- **SYNQ Workbench** - the original SIH 2026 prototype for SIH26117 by team
+  **Avengers6**. The retrieval, citation, agent, tool and security machinery
+  this project stands on is theirs. The first commit in this repository is
+  their code as received.
+- **Manak Mitra remodel** for SIH26107 - [voidwager](https://github.com/voidwager).
+- **Knowledge base** - public material of the Bureau of Indian Standards and
+  the Press Information Bureau, Government of India, with source links in
+  [`data/bis/source/MANIFEST.md`](data/bis/source/MANIFEST.md).
+
+No licence file is included: the original SYNQ code belongs to its team.
+Ask before reusing it.
